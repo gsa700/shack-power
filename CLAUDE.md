@@ -1,4 +1,4 @@
-# Shack Power (shack-power)
+﻿# Shack Power (shack-power)
 
 Cross-platform desktop monitor for a **Victron SmartShunt 300A** over VE.Direct serial —
 live V/A/W readout, daily CSV power logging, history charts. **.NET 10 + Avalonia 12.1.1**,
@@ -107,7 +107,4 @@ Update `CHANGELOG.md` every release.
 
 ## Build phases (2026-08-28 plan)
 
-Phased build per the approved plan: 1 scaffold+plumbing (done), 2 VE.Direct core, 3 app shell in
-`--sim`, 4 logging+Setup+tray, 5 strip chart + Chart window, 6 install/update/release/cutover.
-Cutover is the only step that touches COM13, and includes capturing a real raw stream into test
-fixtures (`tools/Capture-VeDirect.ps1`) — until then protocol fixtures are constructed per spec.
+All six phases landed 2026-08-28, live cutover included: the installed copy took over COM13 from the retired Python prototype, its daily CSV continued the prototype's same-day file with a single header, and a real raw capture is committed as tests/Fixtures/vedirect-capture.bin (RealCaptureTests runs it through the full pipeline). Still open: Linux/CM5 hardware pass, physical unplug/replug and sleep/resume checks, tray interactive check.

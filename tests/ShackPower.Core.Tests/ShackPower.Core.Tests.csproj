@@ -17,4 +17,9 @@
     <ProjectReference Include="..\..\src\ShackPower.Core\ShackPower.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Real SmartShunt capture from the station (see RealCaptureTests). -->
+    <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
