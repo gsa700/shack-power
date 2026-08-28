@@ -128,8 +128,8 @@ public sealed class StripChartControl : Control
         // Horizontal gridlines at a nice step, labelled on the right (outside the clip). The
         // label precision comes from the STEP, not the magnitude — a 13.84–13.99 V axis at a
         // 0.05 step must read 13.85 / 13.90 / 13.95, never a wall of "14"s.
-        var step = NiceStep(range);
-        var axisFmt = StepFormat(step);
+        var step = ChartScale.NiceStep(range);
+        var axisFmt = ChartScale.StepFormat(step);
         for (var y = Math.Ceiling(lo / step) * step; y <= hi; y += step)
         {
             var p = Map(0, y);
@@ -200,19 +200,6 @@ public sealed class StripChartControl : Control
         }
     }
 
-    /// <summary>1/2/5×10ⁿ step giving roughly 3–6 gridlines across the range.</summary>
-    private static double NiceStep(double range)
-    {
-        var raw = range / 4.0;
-        var mag = Math.Pow(10, Math.Floor(Math.Log10(Math.Max(raw, 1e-9))));
-        foreach (var m in new[] { 1.0, 2.0, 5.0 })
-            if (raw <= m * mag) return m * mag;
-        return 10 * mag;
-    }
-
-    /// <summary>Enough decimals to distinguish neighbouring gridlines at this step.</summary>
-    private static string StepFormat(double step) =>
-        step >= 1 ? "0" : step >= 0.1 ? "0.0" : step >= 0.01 ? "0.00" : "0.000";
 
     private static void DrawText(DrawingContext ctx, string text, IBrush brush, double size,
         Point at, bool centered = false, bool centerYAtTop = false)

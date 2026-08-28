@@ -83,3 +83,23 @@ internal static class ChartCrosshair
     private static FormattedText Format(string text, IBrush brush) =>
         new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, Typeface.Default, 11, brush);
 }
+
+/// <summary>Axis-scale arithmetic shared by both chart controls.</summary>
+internal static class ChartScale
+{
+    /// <summary>1/2/5×10ⁿ step giving roughly 3–6 gridlines across the range.</summary>
+    public static double NiceStep(double range)
+    {
+        var raw = range / 4.0;
+        var mag = Math.Pow(10, Math.Floor(Math.Log10(Math.Max(raw, 1e-9))));
+        foreach (var m in new[] { 1.0, 2.0, 5.0 })
+            if (raw <= m * mag) return m * mag;
+        return 10 * mag;
+    }
+
+    /// <summary>Enough decimals to distinguish neighbouring gridlines at this step — the label
+    /// precision comes from the step, never the magnitude (a 13.84–13.99 V axis at a 0.05 step
+    /// must read 13.85 / 13.90 / 13.95, not a wall of "14"s).</summary>
+    public static string StepFormat(double step) =>
+        step >= 1 ? "0" : step >= 0.1 ? "0.0" : step >= 0.01 ? "0.00" : "0.000";
+}

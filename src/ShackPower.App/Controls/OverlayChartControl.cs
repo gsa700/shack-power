@@ -121,14 +121,6 @@ public sealed class OverlayChartControl : Control
             return;
         }
 
-        // Unlabelled quarter gridlines: with three private scales the lines are visual rhythm,
-        // not values — the values live in the per-series range labels on the right.
-        for (var i = 1; i <= 3; i++)
-        {
-            var y = plot.Y + plot.Height * i / 4;
-            ctx.DrawLine(gridPen, new Point(plot.X, y), new Point(plot.Right, y));
-        }
-
         var windowSeconds = Math.Max(1.0, WindowSeconds);
         for (var i = 0; i <= 2; i++)
         {
@@ -142,18 +134,26 @@ public sealed class OverlayChartControl : Control
 
         ctx.DrawRectangle(gridPen, plot);
 
-        // Range labels on the right, in the trace's own color: max at the region's top, min at
-        // its bottom. Anchored to clean thirds rather than the draw-bands — the bands overlap
-        // on purpose, and labels anchored to them collide right where the bands meet.
-        for (var i = 0; i < series.Length; i++)
+        // Each band gets a real scale in its channel's color, VictronConnect-style: gridlines at
+        // nice steps within the band (faded to the channel's tint so three sets of lines read as
+        // three scales, not one grid) and value labels down the right edge.
+        foreach (var (samples, brush, unit, fmt, bandTop, bandBottom) in series)
         {
-            var (samples, brush, unit, fmt, _, _) = series[i];
             if (samples is null || samples.Count == 0) continue;
-            var (lo, hi) = RangeOf(samples);
-            DrawText(ctx, $"{hi.ToString(fmt, CultureInfo.CurrentCulture)} {unit}", brush, 10,
-                new Point(plot.Right + 6, plot.Y + i / 3.0 * plot.Height));
-            DrawText(ctx, $"{lo.ToString(fmt, CultureInfo.CurrentCulture)} {unit}", brush, 10,
-                new Point(plot.Right + 6, plot.Y + (i + 1) / 3.0 * plot.Height - 13));
+            var (lo, hi) = PaddedRange(samples);
+            var range = hi - lo;
+            var bandY = plot.Y + bandTop * plot.Height;
+            var bandH = (bandBottom - bandTop) * plot.Height;
+            var step = ChartScale.NiceStep(range);
+            var fmtStep = ChartScale.StepFormat(step);
+            var tickPen = new Pen(Fade(brush, 0.18), 1);
+            for (var y = Math.Ceiling(lo / step) * step; y <= hi; y += step)
+            {
+                var py = bandY + (hi - y) / range * bandH;
+                ctx.DrawLine(tickPen, new Point(plot.X, py), new Point(plot.Right, py));
+                DrawText(ctx, $"{y.ToString(fmtStep, CultureInfo.CurrentCulture)} {unit}", brush, 10,
+                    new Point(plot.Right + 6, py - 6));
+            }
         }
 
         using (ctx.PushGeometryClip(new RectangleGeometry(plot)))
@@ -161,10 +161,7 @@ public sealed class OverlayChartControl : Control
             foreach (var (samples, brush, _, _, bandTop, bandBottom) in series)
             {
                 if (samples is null || samples.Count == 0) continue;
-                var (lo, hi) = RangeOf(samples);
-                var pad = Math.Max((hi - lo) * 0.06, 0.02);
-                lo -= pad;
-                hi += pad;
+                var (lo, hi) = PaddedRange(samples);
                 var range = hi - lo;
                 var bandY = plot.Y + bandTop * plot.Height;
                 var bandH = (bandBottom - bandTop) * plot.Height;
@@ -173,7 +170,7 @@ public sealed class OverlayChartControl : Control
                     plot.X + offset / windowSeconds * plot.Width,
                     bandY + (hi - value) / range * bandH);
 
-                var envPen = new Pen(Fade(brush), 1);
+                var envPen = new Pen(Fade(brush, 0.4), 1);
                 foreach (var s in samples)
                 {
                     if (s.Max - s.Min < 1e-9) continue;
@@ -228,7 +225,7 @@ public sealed class OverlayChartControl : Control
         }
     }
 
-    private static (double lo, double hi) RangeOf(IReadOnlyList<ChartSample> samples)
+    private static (double lo, double hi) PaddedRange(IReadOnlyList<ChartSample> samples)
     {
         var lo = double.MaxValue;
         var hi = double.MinValue;
@@ -237,13 +234,15 @@ public sealed class OverlayChartControl : Control
             if (s.Min < lo) lo = s.Min;
             if (s.Max > hi) hi = s.Max;
         }
-        return (lo, hi);
+        // The same padding the band Map uses, so gridline labels and trace share one scale.
+        var pad = Math.Max((hi - lo) * 0.06, 0.02);
+        return (lo - pad, hi + pad);
     }
 
-    /// <summary>A 40%-opacity version of a solid brush for the envelope strokes, so three
-    /// overlapping envelopes read as texture instead of mud.</summary>
-    private static IBrush Fade(IBrush brush) =>
-        brush is ISolidColorBrush s ? new SolidColorBrush(s.Color, 0.4) : brush;
+    /// <summary>A reduced-opacity tint of a solid brush — 0.4 for envelope strokes, 0.18 for a
+    /// band's gridlines, so three overlapping scales read as texture instead of mud.</summary>
+    private static IBrush Fade(IBrush brush, double opacity) =>
+        brush is ISolidColorBrush s ? new SolidColorBrush(s.Color, opacity) : brush;
 
     private static void DrawText(DrawingContext ctx, string text, IBrush brush, double size,
         Point at, bool centered = false, bool centerYAtTop = false)

@@ -6,3 +6,5 @@ now a lot of hams might want to incorporate or already have a battery backup sys
 
 adding a battery or bank of batteries would require a second shunt.
 
+how to distinguish between them? sum and total? or?
+
