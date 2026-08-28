@@ -16,9 +16,12 @@ public partial class App : Application
     private MeterService _meter = null!;
     private PowerLoggingService _logging = null!;
     private DisplaySettings _display = null!;
+    private ChartHistoryService _chartHistory = null!;
     private SetupViewModel _setupVm = null!;
+    private ChartViewModel? _chartVm;
     private MainWindow _mainWindow = null!;
     private SetupWindow? _setupWindow;
+    private ChartWindow? _chartWindow;
 
     public bool IsExiting { get; private set; }
 
@@ -36,8 +39,13 @@ public partial class App : Application
                 .Any(a => a.Equals("--sim", StringComparison.OrdinalIgnoreCase));
             var openSetup = Environment.GetCommandLineArgs()
                 .Any(a => a.Equals("--setup", StringComparison.OrdinalIgnoreCase));
+            var openChart = Environment.GetCommandLineArgs()
+                .Any(a => a.Equals("--chart", StringComparison.OrdinalIgnoreCase));
             _meter = new MeterService(simulated);
             _logging = new PowerLoggingService(_meter, ConfigStore.LogDir, _config.LogEnabled);
+            // Created at startup, not on first window open, so the live tail exists by the time
+            // the Chart window is opened rather than starting empty.
+            _chartHistory = new ChartHistoryService(_meter, ConfigStore.LogDir);
             _setupVm = new SetupViewModel(_meter, _display, _logging, ExitForUpdate)
             {
                 CheckUpdatesAtStartup = _config.CheckUpdatesAtStartup,
@@ -73,6 +81,7 @@ public partial class App : Application
             _mainWindow.Opened += async (_, _) =>
             {
                 if (openSetup) ShowSetup();
+                if (openChart) ShowChart();
                 if (_config.CheckUpdatesAtStartup && !simulated)
                 {
                     await _setupVm.CheckUpdatesAsync();
@@ -100,6 +109,47 @@ public partial class App : Application
             _setupWindow.Show();
         }
         _setupWindow.Activate();
+    }
+
+    /// <summary>Open the Chart window (LP-100A's Vector/Log-window pattern: owned by main,
+    /// view model built on demand and detached on close).</summary>
+    public void ShowChart()
+    {
+        if (_chartWindow is null)
+        {
+            _chartVm = new ChartViewModel(_chartHistory);
+            _chartWindow = new ChartWindow { DataContext = _chartVm, Topmost = _display.AlwaysOnTop };
+            RestoreChartBounds(_chartWindow);
+            _chartWindow.Show(_mainWindow);   // owned by main -> closes with it
+        }
+        else
+        {
+            _chartWindow.Show();
+        }
+        _chartWindow.Activate();
+    }
+
+    public void NotifyChartClosing(ChartWindow w)
+    {
+        _config.ChartX = w.Position.X;
+        _config.ChartY = w.Position.Y;
+        _config.ChartW = w.Width;
+        _config.ChartH = w.Height;
+        // Unhook so a closed window isn't still re-decimating on every reading.
+        _chartVm?.Dispose();
+        _chartVm = null;
+        _chartWindow = null;
+    }
+
+    private void RestoreChartBounds(Window w)
+    {
+        if (_config.ChartW is > 400) w.Width = _config.ChartW.Value;
+        if (_config.ChartH is > 300) w.Height = _config.ChartH.Value;
+        if (_config is { ChartX: not null, ChartY: not null })
+        {
+            w.WindowStartupLocation = WindowStartupLocation.Manual;
+            w.Position = new PixelPoint((int)_config.ChartX.Value, (int)_config.ChartY.Value);
+        }
     }
 
     /// <summary>Close the app so the staged update helper can swap the executable and relaunch.</summary>
@@ -150,6 +200,7 @@ public partial class App : Application
             case nameof(DisplaySettings.AlwaysOnTop):
                 _mainWindow.Topmost = _display.AlwaysOnTop;
                 if (_setupWindow is not null) _setupWindow.Topmost = _display.AlwaysOnTop;
+                if (_chartWindow is not null) _chartWindow.Topmost = _display.AlwaysOnTop;
                 break;
             case nameof(DisplaySettings.MinimizeToTray):
                 SyncTrayIcon();
@@ -197,6 +248,13 @@ public partial class App : Application
                 _config.SetupX = _setupWindow.Position.X;
                 _config.SetupY = _setupWindow.Position.Y;
             }
+            if (_chartWindow is not null)
+            {
+                _config.ChartX = _chartWindow.Position.X;
+                _config.ChartY = _chartWindow.Position.Y;
+                _config.ChartW = _chartWindow.Width;
+                _config.ChartH = _chartWindow.Height;
+            }
             // Don't let a --sim run overwrite the real connection identity.
             if (!_meter.IsSimulated)
             {
@@ -214,6 +272,8 @@ public partial class App : Application
             ConfigStore.Save(_config);
         }
         catch { /* best effort */ }
+        _chartVm?.Dispose();
+        _chartHistory.Dispose();
         _logging.Dispose();
         _meter.Dispose();
     }

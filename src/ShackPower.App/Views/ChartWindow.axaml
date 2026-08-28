@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ShackPower.App.ViewModels"
+        xmlns:ctrl="using:ShackPower.App.Controls"
+        x:Class="ShackPower.App.Views.ChartWindow"
+        x:DataType="vm:ChartViewModel"
+        Width="760" Height="540" MinWidth="520" MinHeight="400"
+        Background="{StaticResource BgBrush}"
+        Icon="/Assets/app-icon.png"
+        Title="Shack Power Chart">
+
+  <Grid RowDefinitions="Auto,*" Margin="12">
+
+    <!-- Toolbar: day paging on the left, window presets on the right. -->
+    <DockPanel Grid.Row="0">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+        <Button Content="1 h" Command="{Binding Window1HCommand}"/>
+        <Button Content="6 h" Command="{Binding Window6HCommand}"/>
+        <Button Content="24 h" Command="{Binding Window24HCommand}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="◀" Command="{Binding PrevDayCommand}"/>
+        <TextBlock Text="{Binding DayText}" FontSize="15" FontWeight="Bold"
+                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" MinWidth="130"
+                   TextAlignment="Center"/>
+        <Button Content="▶" Command="{Binding NextDayCommand}"/>
+      </StackPanel>
+    </DockPanel>
+
+    <!-- The three strips on one white panel. -->
+    <Border Grid.Row="1" Background="{StaticResource PanelBrush}" CornerRadius="8"
+            Padding="10" Margin="0,10,0,0">
+      <Grid RowDefinitions="Auto,*,Auto,*,Auto,*">
+        <TextBlock Grid.Row="0" Text="VOLTS" FontSize="11" FontWeight="Bold"
+                   Foreground="{StaticResource CardDimBrush}"/>
+        <ctrl:StripChartControl Grid.Row="1" Margin="0,2,0,8"
+            Samples="{Binding VoltSamples}" WindowStart="{Binding WindowStart}"
+            WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
+            LineBrush="{StaticResource BlueBrush}" EnvelopeBrush="#66387DC5"
+            GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
+
+        <TextBlock Grid.Row="2" Text="AMPS" FontSize="11" FontWeight="Bold"
+                   Foreground="{StaticResource CardDimBrush}"/>
+        <ctrl:StripChartControl Grid.Row="3" Margin="0,2,0,8"
+            Samples="{Binding AmpSamples}" WindowStart="{Binding WindowStart}"
+            WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
+            LineBrush="{StaticResource OrangeDeepBrush}" EnvelopeBrush="#66E87722"
+            GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
+
+        <TextBlock Grid.Row="4" Text="WATTS" FontSize="11" FontWeight="Bold"
+                   Foreground="{StaticResource CardDimBrush}"/>
+        <ctrl:StripChartControl Grid.Row="5" Margin="0,2,0,0"
+            Samples="{Binding WattSamples}" WindowStart="{Binding WindowStart}"
+            WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
+            LineBrush="{StaticResource GreenBrush}" EnvelopeBrush="#662E9E44"
+            GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

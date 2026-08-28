@@ -16,7 +16,10 @@
                  Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
       <Ellipse Grid.Column="1" Width="12" Height="12" Fill="{Binding ConnDotBrush}"
                VerticalAlignment="Center" Margin="0,0,10,0"/>
-      <Button Grid.Column="2" Content="Setup" Click="OnSetupClick" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+        <Button Content="Chart" Click="OnChartClick" VerticalAlignment="Center"/>
+        <Button Content="Setup" Click="OnSetupClick" VerticalAlignment="Center"/>
+      </StackPanel>
     </Grid>
 
     <!-- The three reading cards: white panels with the VictronConnect offset shadow. -->
