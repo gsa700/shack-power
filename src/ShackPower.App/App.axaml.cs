@@ -7,6 +7,7 @@ using ShackPower.App.Services;
 using ShackPower.App.Settings;
 using ShackPower.App.ViewModels;
 using ShackPower.App.Views;
+using ShackPower.Core;
 
 namespace ShackPower.App;
 
@@ -24,6 +25,9 @@ public partial class App : Application
     private ChartWindow? _chartWindow;
 
     public bool IsExiting { get; private set; }
+
+    /// <summary>An uninstall is in flight; don't write settings back out on the way down.</summary>
+    private bool _uninstalling;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -52,11 +56,14 @@ public partial class App : Application
                 SelectedTabIndex = _config.SetupTab,   // clamped in the setter
             };
 
+            // A hand-installed copy is adopted where it stands; never block startup over this.
+            if (!simulated) try { InstallService.EnsureRegistered(); } catch { /* recorded in its log */ }
+
             if (simulated)
             {
                 _meter.Connect("SIM");
             }
-            else
+            else if (!Program.PendingUninstall)   // don't take the port for a run that only uninstalls
             {
                 // Follow the cable by its chip serial across COM renumbering, then auto-connect.
                 var startupPort = PortIdentity.ResolvePort(_config.Port, _config.Serial);
@@ -78,10 +85,25 @@ public partial class App : Application
             _mainWindow.Closing += (_, _) => SaveAndCleanup();
             SyncTrayIcon();
 
+            var updateFailed = !simulated && UpdateService.ConsumeUpdateFailed();
+
             _mainWindow.Opened += async (_, _) =>
             {
+                // This run exists only to uninstall: ask, act, and go. Nothing else should start.
+                if (Program.PendingUninstall)
+                {
+                    await RunUninstallAsync();
+                    return;
+                }
+
                 if (openSetup) ShowSetup();
                 if (openChart) ShowChart();
+
+                // A copy running from wherever it was unzipped offers to install itself.
+                if (!simulated && InstallService.Mode == InstallMode.Loose && await OfferInstallAsync()) return;
+
+                if (updateFailed) ShowSetup(SetupViewModel.UpdatesTab);
+
                 if (_config.CheckUpdatesAtStartup && !simulated)
                 {
                     await _setupVm.CheckUpdatesAsync();
@@ -154,6 +176,115 @@ public partial class App : Application
 
     /// <summary>Close the app so the staged update helper can swap the executable and relaunch.</summary>
     public void ExitForUpdate() => _mainWindow.Close();
+
+    /// <summary>Minimal modal confirm; <paramref name="negative"/> null makes it a one-button notice.</summary>
+    private Task<bool> ConfirmAsync(string title, string message,
+        string affirmative = "Continue", string? negative = "Cancel", string? detail = null) =>
+        new ConfirmWindow(title, message, affirmative, negative, detail).ShowDialog<bool>(_mainWindow);
+
+    /// <summary>
+    /// Offer to install a loose copy. Returns true if the app is handing over to the installed
+    /// copy and the caller should stop starting things up.
+    /// </summary>
+    private async Task<bool> OfferInstallAsync()
+    {
+        var accepted = await ConfirmAsync(
+            "Install Shack Power",
+            "Install Shack Power on this computer?",
+            affirmative: "Install",
+            negative: "Not now",
+            detail: $"Copies the program to {InstallService.InstallDirectory} and lists it in "
+                  + "Settings → Apps → Installed apps, with a Start Menu shortcut. Your settings and "
+                  + "power logs are untouched either way.\n\n"
+                  + $"To run from here permanently without being asked again, put a file named "
+                  + $"{InstallLayout.PortableMarker} beside the program.");
+
+        if (!accepted) return false;
+
+        try
+        {
+            var installed = InstallService.Install();
+
+            // Installed but not listed is a real outcome, not a detail: the program works, yet the
+            // usual way to remove it is missing. Say so here rather than leave it to be discovered.
+            if (!installed.Registered)
+            {
+                await ConfirmAsync("Installed, with one problem",
+                    $"Shack Power is installed in {InstallService.InstallDirectory} and will run "
+                    + "normally, but it could not add itself to Settings → Apps → Installed apps.",
+                    affirmative: "OK", negative: null,
+                    detail: "Starting the installed copy again usually adds the entry. Failing that, "
+                          + "run it once with --install from a command prompt.");
+            }
+
+            InstallService.LaunchDetached(installed.ExePath);
+            // Closing runs the normal save path on purpose, so settings carry over to the
+            // installed copy, which reads the same per-user data directory.
+            _mainWindow.Close();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await ConfirmAsync("Install failed",
+                "Shack Power could not install itself.", affirmative: "OK", negative: null,
+                detail: ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Interactive uninstall. Settings and the power logs are asked about separately, both
+    /// defaulting to keep: they share a directory but not their stakes, and the logs are
+    /// operating history nothing can bring back.
+    /// </summary>
+    private async Task RunUninstallAsync()
+    {
+        var confirmed = await ConfirmAsync(
+            "Uninstall Shack Power",
+            "Remove Shack Power from this computer?",
+            affirmative: "Uninstall",
+            negative: "Cancel",
+            detail: $"Deletes the program from {InstallService.ExeDirectory} and removes its "
+                  + "Start Menu shortcut and Installed apps entry.");
+
+        if (!confirmed)
+        {
+            _mainWindow.Close();
+            return;
+        }
+
+        var removeSettings = await ConfirmAsync(
+            "Settings",
+            "Also delete your settings?",
+            affirmative: "Delete settings",
+            negative: "Keep settings",
+            detail: "Serial port pinning, display rows, thresholds and window positions. Keeping "
+                  + "them means a later reinstall picks up exactly where you left off.");
+
+        var removeLogs = await ConfirmAsync(
+            "Power logs",
+            "Also delete your power logs?",
+            affirmative: "Delete the logs",
+            negative: "Keep the logs",
+            detail: PowerLogWarning());
+
+        _uninstalling = true;
+        InstallService.Uninstall(new UninstallOptions(removeSettings, removeLogs));
+        _mainWindow.Close();
+    }
+
+    /// <summary>Spell out what deleting the logs costs, in days of history rather than filenames —
+    /// "213 days of readings" is a decision someone can make; "power-*.csv" is not.</summary>
+    private static string PowerLogWarning()
+    {
+        var days = InstallService.CountLogDays();
+        var what = days > 0
+            ? $"This is {days:N0} day{(days == 1 ? "" : "s")} of voltage, current and power history "
+            + "at one reading per second."
+            : "This is your recorded voltage, current and power history.";
+        return what + $" It cannot be recovered.\n\nKeeping it leaves the files in "
+             + $"{ConfigStore.LogDir}, where a later install will find them again.";
+    }
 
     /// <summary>A child window is closing; capture its bounds and drop the reference.</summary>
     public void NotifySetupClosing(SetupWindow w)
@@ -238,6 +369,17 @@ public partial class App : Application
     {
         if (IsExiting) return;   // main.Closing fires once; guard against re-entry
         IsExiting = true;
+
+        // An uninstall must not write config.json back out on its way down — the user may have
+        // just asked for it to be deleted, and recreating it here would undo that answer.
+        if (_uninstalling)
+        {
+            _chartVm?.Dispose();
+            _chartHistory.Dispose();
+            _logging.Dispose();
+            _meter.Dispose();
+            return;
+        }
 
         try
         {
