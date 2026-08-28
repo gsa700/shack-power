@@ -42,6 +42,21 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
     public bool IsToday => _day == DateOnly.FromDateTime(DateTime.Now);
     public string DayText => IsToday ? "Today" : _day.ToString("ddd yyyy-MM-dd");
 
+    private bool _combined;
+    /// <summary>All three channels overlaid on one tall plot (each on its own scale) instead of
+    /// three stacked strips. A presentation toggle only — the decimated data is shared.</summary>
+    public bool Combined
+    {
+        get => _combined;
+        set
+        {
+            if (SetProperty(ref _combined, value)) OnPropertyChanged(nameof(Split));
+        }
+    }
+
+    /// <summary>Inverse of <see cref="Combined"/> for the stacked panel's visibility binding.</summary>
+    public bool Split => !_combined;
+
     private double _liveWindowSeconds = 3600;
 
     private DateTime _windowStart;

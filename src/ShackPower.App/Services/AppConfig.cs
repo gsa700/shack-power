@@ -16,6 +16,9 @@ public sealed class AppConfig
     public double? ChartW { get; set; }
     public double? ChartH { get; set; }
 
+    /// <summary>Chart window presentation: true = all channels overlaid on one plot.</summary>
+    public bool ChartCombined { get; set; }
+
     /// <summary>Which Setup tab was showing, so it reopens where it was left. Clamped on load.</summary>
     public int SetupTab { get; set; }
 

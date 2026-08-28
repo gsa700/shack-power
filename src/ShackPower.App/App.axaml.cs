@@ -139,7 +139,7 @@ public partial class App : Application
     {
         if (_chartWindow is null)
         {
-            _chartVm = new ChartViewModel(_chartHistory);
+            _chartVm = new ChartViewModel(_chartHistory) { Combined = _config.ChartCombined };
             _chartWindow = new ChartWindow { DataContext = _chartVm, Topmost = _display.AlwaysOnTop };
             RestoreChartBounds(_chartWindow);
             _chartWindow.Show(_mainWindow);   // owned by main -> closes with it
@@ -157,6 +157,7 @@ public partial class App : Application
         _config.ChartY = w.Position.Y;
         _config.ChartW = w.Width;
         _config.ChartH = w.Height;
+        if (_chartVm is not null) _config.ChartCombined = _chartVm.Combined;
         // Unhook so a closed window isn't still re-decimating on every reading.
         _chartVm?.Dispose();
         _chartVm = null;
@@ -396,6 +397,7 @@ public partial class App : Application
                 _config.ChartY = _chartWindow.Position.Y;
                 _config.ChartW = _chartWindow.Width;
                 _config.ChartH = _chartWindow.Height;
+                if (_chartVm is not null) _config.ChartCombined = _chartVm.Combined;
             }
             // Don't let a --sim run overwrite the real connection identity.
             if (!_meter.IsSimulated)

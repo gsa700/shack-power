@@ -1,0 +1,6 @@
+Scope:
+
+this app will not replace Victron connect. it's not intended to. what it is intended for is real time monitoring of your ham shack power system. for most people that will start and stop with the power supply. so a single 300a smart shunt with a ve.direct usb cable is the ticket. use the Victron connect app on your phone to configure and set the shunt to dc monitoring mode.
+
+now a lot of hams might want to incorporate or already have a battery backup system in the shack as well as the power supply. this will call for the ability to expand the app to include multiple components and to integrate them accordingly.
+
