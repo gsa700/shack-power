@@ -2,9 +2,11 @@
 
 ## v0.1.1-beta — 2026-08-28
 
-- Chart window: new **Combined** view (toolbar toggle, persisted) overlaying all three channels
-  on one tall plot — each channel independently scaled to full height, with color-coded max/min
-  range labels down the right edge; the stacked Split view remains
+- Chart window: new **Combined** view (toolbar toggle, persisted) putting all three channels on
+  one tall plot in VictronConnect's trends arrangement — volts anchored to the top band, amps to
+  the bottom, watts between, each independently scaled so the traces grow toward one another
+  under load, with color-coded max/min range labels down the right edge; the stacked Split view
+  remains
 - Hover crosshair on both chart views: a dashed cursor line with a readout box showing the time
   and the value(s) under the cursor, color-coded per channel; decimated buckets show their
   min…max envelope instead of pretending to a single value; no readout inside data gaps

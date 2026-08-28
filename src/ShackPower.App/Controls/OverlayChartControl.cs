@@ -7,12 +7,13 @@ using ShackPower.Core;
 namespace ShackPower.App.Controls;
 
 /// <summary>
-/// The combined chart: all three channels overlaid on one tall plot, each <b>independently
-/// normalized</b> to the full plot height. A shared y-axis would be a lie of scale — volts live
-/// in a 0.2 V band while watts swing hundreds, so a common axis flattens the voltage trace into
-/// a ruler line. Instead each series stretches to its own min/max, and the numbers come from the
-/// color-coded range labels down the right edge (top = each trace's max, bottom = its min).
-/// Same immediate-mode recipe as <see cref="StripChartControl"/>.
+/// The combined chart: all three channels on one tall plot, each independently normalized into
+/// its <b>own vertical band</b> — volts anchored to the top, amps to the bottom, watts in the
+/// middle, the way VictronConnect's trends view lays them out, so the traces keep their identity
+/// regions and grow toward one another as activity increases. A shared y-axis would be a lie of
+/// scale (volts live in a 0.2 V band while watts swing hundreds), so the numbers come from the
+/// color-coded range labels at each band's edges on the right. Same immediate-mode recipe as
+/// <see cref="StripChartControl"/>.
 /// </summary>
 public sealed class OverlayChartControl : Control
 {
@@ -103,14 +104,17 @@ public sealed class OverlayChartControl : Control
         var label = LabelBrush ?? Palette.CardDimBrush;
         var gridPen = new Pen(grid, 1);
 
-        var series = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Unit, string Fmt)[]
+        // Band fractions of the plot height per channel (VictronConnect's arrangement): volts
+        // hug the top, amps the bottom, watts between — with a little overlap so busy traces
+        // visibly reach toward each other instead of living in sealed lanes.
+        var series = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Unit, string Fmt, double BandTop, double BandBottom)[]
         {
-            (VoltSamples, VoltBrush ?? Palette.BlueBrush, "V", "0.00"),
-            (AmpSamples, AmpBrush ?? Palette.OrangeDeepBrush, "A", "0.0"),
-            (WattSamples, WattBrush ?? Palette.GreenBrush, "W", "0"),
+            (VoltSamples, VoltBrush ?? Palette.BlueBrush, "V", "0.00", 0.00, 0.36),
+            (WattSamples, WattBrush ?? Palette.GreenBrush, "W", "0", 0.32, 0.68),
+            (AmpSamples, AmpBrush ?? Palette.OrangeDeepBrush, "A", "0.0", 0.64, 1.00),
         };
 
-        if (series.All(s => s.Samples is null || s.Samples.Count == 0))
+        if (series.All(static s => s.Samples is null || s.Samples.Count == 0))
         {
             ctx.DrawRectangle(gridPen, plot);
             DrawText(ctx, "no data", label, 11, new Point(plot.Center.X, plot.Center.Y), centered: true);
@@ -138,23 +142,23 @@ public sealed class OverlayChartControl : Control
 
         ctx.DrawRectangle(gridPen, plot);
 
-        // Range labels: three stacked rows at the top-right (each trace's max) and bottom-right
-        // (its min), in the trace's own color — how a reader attaches numbers to a trace.
-        var row = 0;
-        foreach (var (samples, brush, unit, fmt) in series)
+        // Range labels on the right, in the trace's own color: max at the region's top, min at
+        // its bottom. Anchored to clean thirds rather than the draw-bands — the bands overlap
+        // on purpose, and labels anchored to them collide right where the bands meet.
+        for (var i = 0; i < series.Length; i++)
         {
-            if (samples is null || samples.Count == 0) { row++; continue; }
+            var (samples, brush, unit, fmt, _, _) = series[i];
+            if (samples is null || samples.Count == 0) continue;
             var (lo, hi) = RangeOf(samples);
             DrawText(ctx, $"{hi.ToString(fmt, CultureInfo.CurrentCulture)} {unit}", brush, 10,
-                new Point(plot.Right + 6, plot.Y + row * 12));
+                new Point(plot.Right + 6, plot.Y + i / 3.0 * plot.Height));
             DrawText(ctx, $"{lo.ToString(fmt, CultureInfo.CurrentCulture)} {unit}", brush, 10,
-                new Point(plot.Right + 6, plot.Bottom - 12 * (3 - row)));
-            row++;
+                new Point(plot.Right + 6, plot.Y + (i + 1) / 3.0 * plot.Height - 13));
         }
 
         using (ctx.PushGeometryClip(new RectangleGeometry(plot)))
         {
-            foreach (var (samples, brush, _, _) in series)
+            foreach (var (samples, brush, _, _, bandTop, bandBottom) in series)
             {
                 if (samples is null || samples.Count == 0) continue;
                 var (lo, hi) = RangeOf(samples);
@@ -162,10 +166,12 @@ public sealed class OverlayChartControl : Control
                 lo -= pad;
                 hi += pad;
                 var range = hi - lo;
+                var bandY = plot.Y + bandTop * plot.Height;
+                var bandH = (bandBottom - bandTop) * plot.Height;
 
                 Point Map(double offset, double value) => new(
                     plot.X + offset / windowSeconds * plot.Width,
-                    plot.Y + (hi - value) / range * plot.Height);
+                    bandY + (hi - value) / range * bandH);
 
                 var envPen = new Pen(Fade(brush), 1);
                 foreach (var s in samples)
@@ -208,7 +214,7 @@ public sealed class OverlayChartControl : Control
             var tolerance = Math.Max(GapSeconds, windowSeconds / plot.Width * 4);
             var lines = new List<ChartCrosshair.Line>();
             double? snappedOffset = null;
-            foreach (var (samples, brush, unit, fmt) in series)
+            foreach (var (samples, brush, unit, fmt, _, _) in series)
             {
                 if (ChartCrosshair.Nearest(samples, offset, tolerance) is not { } s) continue;
                 snappedOffset ??= s.OffsetSeconds;

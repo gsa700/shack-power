@@ -4,3 +4,5 @@ this app will not replace Victron connect. it's not intended to. what it is inte
 
 now a lot of hams might want to incorporate or already have a battery backup system in the shack as well as the power supply. this will call for the ability to expand the app to include multiple components and to integrate them accordingly.
 
+adding a battery or bank of batteries would require a second shunt.
+
