@@ -1,4 +1,4 @@
-using ShackPower.Core;
+﻿using ShackPower.Core;
 using Xunit;
 
 namespace ShackPower.Core.Tests;
@@ -10,7 +10,7 @@ namespace ShackPower.Core.Tests;
 /// </summary>
 public class ReadingAccumulatorTests
 {
-    private static Dictionary<string, string> Main(string v = "13960", string i = "6298") => new()
+    private static Dictionary<string, string> MainBlock(string v = "13960", string i = "6298") => new()
     {
         ["PID"] = "0xC038", ["V"] = v, ["I"] = i, ["P"] = "88",
         ["CE"] = "---", ["SOC"] = "---", ["TTG"] = "---",
@@ -18,7 +18,7 @@ public class ReadingAccumulatorTests
         ["BMV"] = "SmartShunt 300A", ["FW"] = "0419", ["MON"] = "1",
     };
 
-    private static Dictionary<string, string> History() => new()
+    private static Dictionary<string, string> HistoryBlock() => new()
     {
         ["H7"] = "13842", ["H8"] = "13992", ["H17"] = "225", ["H18"] = "310",
     };
@@ -26,13 +26,13 @@ public class ReadingAccumulatorTests
     [Fact]
     public void A_history_only_block_emits_nothing()
     {
-        Assert.Null(new ReadingAccumulator().Feed(History()));
+        Assert.Null(new ReadingAccumulator().Feed(HistoryBlock()));
     }
 
     [Fact]
     public void A_main_block_emits_a_reading_with_converted_units()
     {
-        var r = new ReadingAccumulator().Feed(Main());
+        var r = new ReadingAccumulator().Feed(MainBlock());
         Assert.NotNull(r);
         Assert.Equal(13.96, r!.Volts!.Value, 6);
         Assert.Equal(6.298, r.Amps!.Value, 6);
@@ -46,7 +46,7 @@ public class ReadingAccumulatorTests
     [Fact]
     public void Dc_meter_mode_unavailable_fields_come_through_null()
     {
-        var r = new ReadingAccumulator().Feed(Main());
+        var r = new ReadingAccumulator().Feed(MainBlock());
         Assert.Null(r!.Soc);
         Assert.Null(r.ConsumedAh);
         Assert.Null(r.TtgMinutes);
@@ -56,8 +56,8 @@ public class ReadingAccumulatorTests
     public void History_fields_ride_along_on_the_next_main_block()
     {
         var acc = new ReadingAccumulator();
-        Assert.Null(acc.Feed(History()));
-        var r = acc.Feed(Main());
+        Assert.Null(acc.Feed(HistoryBlock()));
+        var r = acc.Feed(MainBlock());
         Assert.Equal(13.842, r!.VminHistory!.Value, 6);
         Assert.Equal(13.992, r.VmaxHistory!.Value, 6);
         Assert.Equal(2.25, r.TotalKwhDrawn!.Value, 6);
@@ -67,7 +67,7 @@ public class ReadingAccumulatorTests
     [Fact]
     public void Before_any_history_block_the_history_fields_are_null()
     {
-        var r = new ReadingAccumulator().Feed(Main());
+        var r = new ReadingAccumulator().Feed(MainBlock());
         Assert.Null(r!.VminHistory);
         Assert.Null(r.TotalKwhCharged);
     }
@@ -76,9 +76,9 @@ public class ReadingAccumulatorTests
     public void Later_main_blocks_refresh_the_live_values_and_keep_history()
     {
         var acc = new ReadingAccumulator();
-        acc.Feed(History());
-        acc.Feed(Main());
-        var r = acc.Feed(Main(v: "13500", i: "-2000"));
+        acc.Feed(HistoryBlock());
+        acc.Feed(MainBlock());
+        var r = acc.Feed(MainBlock(v: "13500", i: "-2000"));
         Assert.Equal(13.5, r!.Volts!.Value, 6);
         Assert.Equal(-2.0, r.Amps!.Value, 6);
         Assert.Equal(13.842, r.VminHistory!.Value, 6);   // history persists between its blocks
@@ -87,7 +87,7 @@ public class ReadingAccumulatorTests
     [Fact]
     public void An_active_alarm_decodes_state_and_reason()
     {
-        var block = Main();
+        var block = MainBlock();
         block["Alarm"] = "ON";
         block["AR"] = "1";
         var r = new ReadingAccumulator().Feed(block);
@@ -98,7 +98,7 @@ public class ReadingAccumulatorTests
     [Fact]
     public void Soc_and_ttg_parse_when_the_shunt_is_a_battery_monitor()
     {
-        var block = Main();
+        var block = MainBlock();
         block["SOC"] = "872";
         block["CE"] = "-12400";
         block["TTG"] = "-1";

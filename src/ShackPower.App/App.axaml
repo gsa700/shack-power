@@ -1,0 +1,93 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ShackPower.App.App"
+             RequestedThemeVariant="Light">
+
+  <Application.Resources>
+    <!-- VictronConnect-homage palette (blue/orange sampled from the real app). Kept in sync
+         with Palette.cs. Light theme, unlike the dark siblings: blue ground, white cards. -->
+    <SolidColorBrush x:Key="BgBrush"       Color="#387DC5"/>
+    <SolidColorBrush x:Key="PanelBrush"    Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TrackBrush"    Color="#2A62A0"/>
+    <SolidColorBrush x:Key="ShadowBrush"   Color="#1E4E83"/>
+    <SolidColorBrush x:Key="TextBrush"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="DimBrush"      Color="#CFE2F4"/>
+    <SolidColorBrush x:Key="CardTextBrush" Color="#25384C"/>
+    <SolidColorBrush x:Key="CardDimBrush"  Color="#8296A8"/>
+    <SolidColorBrush x:Key="OrangeBrush"   Color="#FD8745"/>
+    <SolidColorBrush x:Key="OrangeDeepBrush" Color="#E87722"/>
+    <SolidColorBrush x:Key="RedBrush"      Color="#D83A22"/>
+    <SolidColorBrush x:Key="RedSoftBrush"  Color="#FFB3A6"/>
+    <SolidColorBrush x:Key="GreenBrush"    Color="#2E9E44"/>
+    <SolidColorBrush x:Key="GreenSoftBrush" Color="#B8F0C0"/>
+    <SolidColorBrush x:Key="BlueBrush"     Color="#387DC5"/>
+    <!-- Theme accent — tracks the OS accent, used by list selections in Setup. -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <!-- The family's tab retemplate (from W2/LP-100A), re-brushed for the light palette: tabs sit
+         on the blue ground in dim blue-white, and the selected one fills with the white panel and
+         pulls down 1px so tab and panel read as one shape. -->
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="Margin" Value="0,0,3,0"/>
+      <Setter Property="Background" Value="{StaticResource BgBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}"/>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="TabItem">
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{StaticResource TrackBrush}"
+                  BorderThickness="1,1,1,0"
+                  CornerRadius="6,6,0,0"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Header}"
+                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                              Foreground="{TemplateBinding Foreground}"
+                              FontSize="{TemplateBinding FontSize}"
+                              FontWeight="{TemplateBinding FontWeight}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+
+    <Style Selector="TabItem:selected">
+      <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource BlueBrush}"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <!-- Overlap the panel border by 1px so the active tab and the panel read as one shape. -->
+      <Setter Property="Margin" Value="0,0,3,-1"/>
+    </Style>
+
+    <Style Selector="TabItem:pointerover">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+    </Style>
+
+    <Style Selector="TabControl">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="TabControl">
+          <DockPanel>
+            <ItemsPresenter DockPanel.Dock="Top"
+                            ItemsPanel="{TemplateBinding ItemsPanel}"
+                            Margin="2,0,0,0"/>
+            <Border Background="{StaticResource PanelBrush}"
+                    BorderBrush="{StaticResource TrackBrush}"
+                    BorderThickness="1"
+                    CornerRadius="0,6,6,6"
+                    ZIndex="-1">
+              <ContentPresenter Content="{TemplateBinding SelectedContent}"
+                                ContentTemplate="{TemplateBinding SelectedContentTemplate}"/>
+            </Border>
+          </DockPanel>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+  </Application.Styles>
+
+</Application>
