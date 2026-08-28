@@ -1,0 +1,48 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShackPower.Core", "src\ShackPower.Core\ShackPower.Core.csproj", "{7C41A2E9-4F16-4D2A-9B7D-3E85C1A6F204}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShackPower.App", "src\ShackPower.App\ShackPower.App.csproj", "{D9F3B8A1-62E7-4C55-8140-BC29E7D6A913}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{64B455E5-2399-444E-B9F4-00EDC1535DC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShackPower.Core.Tests", "tests\ShackPower.Core.Tests\ShackPower.Core.Tests.csproj", "{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{83F16E29-7A50-4B9C-A2D8-15C6B4E97F30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IconGen", "tools\IconGen\IconGen.csproj", "{2B94C7D5-E813-4F6A-9C20-D75A1E38B642}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C41A2E9-4F16-4D2A-9B7D-3E85C1A6F204}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C41A2E9-4F16-4D2A-9B7D-3E85C1A6F204}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C41A2E9-4F16-4D2A-9B7D-3E85C1A6F204}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C41A2E9-4F16-4D2A-9B7D-3E85C1A6F204}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9F3B8A1-62E7-4C55-8140-BC29E7D6A913}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9F3B8A1-62E7-4C55-8140-BC29E7D6A913}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9F3B8A1-62E7-4C55-8140-BC29E7D6A913}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9F3B8A1-62E7-4C55-8140-BC29E7D6A913}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B94C7D5-E813-4F6A-9C20-D75A1E38B642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B94C7D5-E813-4F6A-9C20-D75A1E38B642}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B94C7D5-E813-4F6A-9C20-D75A1E38B642}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B94C7D5-E813-4F6A-9C20-D75A1E38B642}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5E80D4C2-91B6-4A3F-B7E1-6F42A8C95D17} = {64B455E5-2399-444E-B9F4-00EDC1535DC7}
+		{2B94C7D5-E813-4F6A-9C20-D75A1E38B642} = {83F16E29-7A50-4B9C-A2D8-15C6B4E97F30}
+	EndGlobalSection
+EndGlobal

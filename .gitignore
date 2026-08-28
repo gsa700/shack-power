@@ -1,0 +1,19 @@
+## .NET build output
+bin/
+obj/
+
+## Rider / VS
+.idea/
+.vs/
+*.user
+
+## Local publish output
+publish/
+artifacts/
+
+## Serial capture logs from the exploration scripts
+tx-capture-*.log
+stream-capture-*.log
+
+## Local, per-user config (mirrors the PowerShell app's gitignored config)
+*.local.json

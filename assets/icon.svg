@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Shack Power app icon: Victron-homage blue tile, white reading card, bolt.
+       Authored at 512x512; tools/IconGen rasterises every frame from this file. -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="#387DC5"/>
+  <!-- white card with the soft offset shadow the app's reading cards use -->
+  <rect x="96" y="112" width="328" height="296" rx="36" fill="#1E4E83"/>
+  <rect x="84" y="100" width="328" height="296" rx="36" fill="#FFFFFF"/>
+  <!-- lightning bolt in Victron action orange -->
+  <path d="M 282 132 L 172 282 L 240 282 L 214 364 L 324 214 L 256 214 Z" fill="#FD8745"/>
+</svg>
