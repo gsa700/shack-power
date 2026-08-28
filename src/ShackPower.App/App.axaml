@@ -25,6 +25,24 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource SystemAccentColor}"/>
   </Application.Resources>
 
+  <!-- Tray icon (Phase 4): hidden unless "minimize to tray" is on, so the tray stays clean for
+       everyone who never asked for it. Windows verified; on Linux this depends on a
+       StatusNotifier host and degrades to a normal minimize when there isn't one. -->
+  <TrayIcon.Icons>
+    <TrayIcons>
+      <TrayIcon Icon="/Assets/app-icon.png" ToolTipText="Shack Power"
+                IsVisible="False" Clicked="OnTrayClicked">
+        <TrayIcon.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="Show" Click="OnTrayShow"/>
+            <NativeMenuItemSeparator/>
+            <NativeMenuItem Header="Exit" Click="OnTrayExit"/>
+          </NativeMenu>
+        </TrayIcon.Menu>
+      </TrayIcon>
+    </TrayIcons>
+  </TrayIcon.Icons>
+
   <Application.Styles>
     <FluentTheme />
 

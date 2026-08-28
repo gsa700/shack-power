@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ShackPower.App.ViewModels"
+        x:Class="ShackPower.App.Views.SetupWindow"
+        x:DataType="vm:SetupViewModel"
+        Width="440" SizeToContent="Height" CanResize="False"
+        Background="{StaticResource BgBrush}"
+        Icon="/Assets/app-icon.png"
+        Title="Shack Power Setup">
+
+  <!-- Styles for content inside the white tab panels. -->
+  <Window.Styles>
+    <Style Selector="TabControl TextBlock.label">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Foreground" Value="{StaticResource CardDimBrush}"/>
+      <Setter Property="Margin" Value="0,10,0,4"/>
+    </Style>
+    <Style Selector="TabControl TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource CardTextBrush}"/>
+    </Style>
+    <Style Selector="TabControl CheckBox">
+      <Setter Property="Foreground" Value="{StaticResource CardTextBrush}"/>
+    </Style>
+  </Window.Styles>
+
+  <TabControl x:Name="Tabs" Margin="8" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+
+    <TabItem Header="Connection" AutomationProperties.Name="Connection">
+      <StackPanel Margin="14,10,14,14">
+        <TextBlock Classes="label" Text="VE.DIRECT PORT"/>
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshPortsCommand}" Margin="6,0,0,0"/>
+          <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="150"/>
+        </DockPanel>
+        <TextBlock Text="{Binding PinnedSerialText}" FontSize="12"
+                   Foreground="{StaticResource CardDimBrush}" Margin="0,6,0,0"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+          <Button Content="{Binding ToggleConnectText}" Command="{Binding ToggleConnectCommand}"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding ConnectionStatusText}" FontSize="12"
+                   Foreground="{Binding ConnectionStatusBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+    </TabItem>
+
+    <TabItem Header="Logging" AutomationProperties.Name="Logging">
+      <StackPanel Margin="14,10,14,14">
+        <CheckBox Content="Log readings to daily CSV files (1 Hz)" IsChecked="{Binding LogEnabled}"/>
+        <TextBlock Classes="label" Text="LOG FOLDER"/>
+        <TextBlock Text="{Binding LogDirText}" FontSize="12" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding LoggedCountText}" FontSize="12"
+                   Foreground="{StaticResource CardDimBrush}" Margin="0,8,0,0"/>
+        <TextBlock Text="{Binding LogErrorText}" FontSize="12" Foreground="{StaticResource RedBrush}"
+                   IsVisible="{Binding LogErrorVisible}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        <Button Content="Open logs folder" Command="{Binding OpenLogsFolderCommand}" Margin="0,12,0,0"/>
+      </StackPanel>
+    </TabItem>
+
+    <TabItem Header="Display" AutomationProperties.Name="Display">
+      <StackPanel Margin="14,10,14,14">
+        <TextBlock Classes="label" Text="ROWS"/>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <CheckBox Grid.Row="0" Grid.Column="0" Content="Min / max volts" IsChecked="{Binding Display.ShowExtremes}"/>
+          <CheckBox Grid.Row="0" Grid.Column="1" Content="Energy totals" IsChecked="{Binding Display.ShowEnergy}"/>
+          <CheckBox Grid.Row="1" Grid.Column="0" Content="Battery (SOC / TTG)" IsChecked="{Binding Display.ShowBattery}"/>
+          <CheckBox Grid.Row="1" Grid.Column="1" Content="Device / firmware" IsChecked="{Binding Display.ShowDevice}"/>
+        </Grid>
+
+        <TextBlock Classes="label" Text="WINDOW"/>
+        <CheckBox Content="Always on top" IsChecked="{Binding Display.AlwaysOnTop}"/>
+        <CheckBox Content="Minimize to the system tray" IsChecked="{Binding Display.MinimizeToTray}"/>
+
+        <TextBlock Classes="label" Text="VOLTAGE COLORS"/>
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="0,0,0,0">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="Orange below" VerticalAlignment="Center" Margin="0,0,10,4"/>
+          <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Display.VoltLowWarn}"
+                         Minimum="0" Maximum="60" Increment="0.1" FormatString="0.0" Width="130"
+                         HorizontalAlignment="Left" Margin="0,0,0,4"/>
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="Red below" VerticalAlignment="Center" Margin="0,0,10,4"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Display.VoltLowAlarm}"
+                         Minimum="0" Maximum="60" Increment="0.1" FormatString="0.0" Width="130"
+                         HorizontalAlignment="Left" Margin="0,0,0,4"/>
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Red above" VerticalAlignment="Center" Margin="0,0,10,0"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding Display.VoltHighAlarm}"
+                         Minimum="0" Maximum="60" Increment="0.1" FormatString="0.0" Width="130"
+                         HorizontalAlignment="Left"/>
+        </Grid>
+      </StackPanel>
+    </TabItem>
+
+    <TabItem Header="Updates" AutomationProperties.Name="Updates">
+      <StackPanel Margin="14,10,14,14">
+        <TextBlock Text="{Binding UpdateStatus}" TextWrapping="Wrap"/>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+          <Button Content="{Binding UpdateButtonLabel}" Command="{Binding CheckOrInstallCommand}"/>
+          <Button Content="Release page" Command="{Binding OpenReleasePageCommand}"/>
+        </StackPanel>
+        <CheckBox Content="Check for updates at startup" IsChecked="{Binding CheckUpdatesAtStartup}"
+                  Margin="0,12,0,0"/>
+      </StackPanel>
+    </TabItem>
+
+  </TabControl>
+</Window>

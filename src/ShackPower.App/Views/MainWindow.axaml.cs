@@ -7,6 +7,9 @@ public partial class MainWindow : Window
 {
     public MainWindow() => InitializeComponent();
 
+    private void OnSetupClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        (Avalonia.Application.Current as App)?.ShowSetup();
+
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
