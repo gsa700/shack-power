@@ -10,10 +10,10 @@ most refined descendant; this repo was ported from both (W2's installer/updater/
 single-meter service shape and CSV log pattern). Their CLAUDE.md files carry rationale that still
 applies here — read them before "fixing" anything that looks odd.
 
-This app replaces the Python prototype at `~/shack-power-monitor/shack_power_monitor.py`
-(VictronConnect itself was retired for monitoring because it grabs every free COM port). The
-prototype keeps running and logging until cutover; its daily CSVs are **byte-compatible** with
-this app's and are copied into the data dir at cutover.
+This app replaced the Python prototype at `~/shack-power-monitor/shack_power_monitor.py` at the
+2026-08-28 cutover (VictronConnect itself was retired for monitoring because it grabs every free
+COM port). The prototype's daily CSVs were byte-compatible by design and were copied into the
+data dir, so history is continuous across the handover; its folder is kept for reference.
 
 ## Build / run / test
 
