@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.2-beta — 2026-08-28
+
+- **Combined chart view rebuilt as VictronConnect Trends** (modelled on a screenshot of the real
+  app): two channels at a time, chosen from color-matched dropdown pickers, overlaid full-height
+  with the primary's value axis down the left and the secondary's down the right, each axis in
+  its trace's color, sharing one set of gridlines. Channel picks persist. The three-band
+  arrangement from v0.1.1 is gone — two-at-a-time is what keeps it readable. Split view
+  unchanged.
+- `--sim` runs now log to a separate `logs-sim` folder — synthetic rows can no longer mix into
+  real operating history (dev sim sessions had salted the live CSV on cutover day)
+- Main window header reads "DC POWER" instead of repeating the app name from the title bar
+
 ## v0.1.1-beta — 2026-08-28
 
 - Chart window: new **Combined** view (toolbar toggle, persisted) putting all three channels on

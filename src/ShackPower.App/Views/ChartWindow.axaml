@@ -62,16 +62,30 @@
       </Grid>
     </Border>
 
-    <!-- All three channels overlaid on one tall plot (Combined view). -->
+    <!-- Combined view: two chosen channels, dual color-matched axes — the VictronConnect
+         Trends arrangement, per the reference screenshot. -->
     <Border Grid.Row="1" Background="{StaticResource PanelBrush}" CornerRadius="8"
             Padding="10" Margin="0,10,0,0" IsVisible="{Binding Combined}">
-      <ctrl:OverlayChartControl
-          VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
-          WattSamples="{Binding WattSamples}" WindowStart="{Binding WindowStart}"
-          WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
-          VoltBrush="{StaticResource BlueBrush}" AmpBrush="{StaticResource OrangeDeepBrush}"
-          WattBrush="{StaticResource GreenBrush}"
-          GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
+      <Grid RowDefinitions="Auto,*">
+        <!-- Channel pickers, bordered in their trace's color like the reference app. -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+          <ComboBox Grid.Column="0" ItemsSource="{Binding Channels}"
+                    SelectedItem="{Binding PrimaryChannel}" MinWidth="130"
+                    BorderBrush="{Binding PrimaryBrush}" BorderThickness="2"
+                    Foreground="{Binding PrimaryBrush}"/>
+          <ComboBox Grid.Column="2" ItemsSource="{Binding Channels}"
+                    SelectedItem="{Binding SecondaryChannel}" MinWidth="130"
+                    BorderBrush="{Binding SecondaryBrush}" BorderThickness="2"
+                    Foreground="{Binding SecondaryBrush}"/>
+        </Grid>
+        <ctrl:OverlayChartControl Grid.Row="1"
+            PrimarySamples="{Binding PrimarySamples}" SecondarySamples="{Binding SecondarySamples}"
+            PrimaryBrush="{Binding PrimaryBrush}" SecondaryBrush="{Binding SecondaryBrush}"
+            PrimaryUnit="{Binding PrimaryUnit}" SecondaryUnit="{Binding SecondaryUnit}"
+            WindowStart="{Binding WindowStart}" WindowSeconds="{Binding WindowSeconds}"
+            GapSeconds="{Binding GapSeconds}"
+            GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
+      </Grid>
     </Border>
 
   </Grid>

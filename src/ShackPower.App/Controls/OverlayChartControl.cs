@@ -7,24 +7,33 @@ using ShackPower.Core;
 namespace ShackPower.App.Controls;
 
 /// <summary>
-/// The combined chart: all three channels on one tall plot, each independently normalized into
-/// its <b>own vertical band</b> — volts anchored to the top, amps to the bottom, watts in the
-/// middle, the way VictronConnect's trends view lays them out, so the traces keep their identity
-/// regions and grow toward one another as activity increases. A shared y-axis would be a lie of
-/// scale (volts live in a 0.2 V band while watts swing hundreds), so the numbers come from the
-/// color-coded range labels at each band's edges on the right. Same immediate-mode recipe as
-/// <see cref="StripChartControl"/>.
+/// The combined chart, modelled directly on VictronConnect's Trends view (screenshotted from
+/// the real app, 2026-08-28): <b>two</b> channels overlaid full-height, the primary's value
+/// scale down the left edge and the secondary's down the right, each axis in its trace's color,
+/// sharing one set of horizontal gridlines. Two-at-a-time is the load-bearing design decision —
+/// the earlier three-band attempt proved that a third scale on one canvas stops being readable.
+/// Each axis picks a nice step so its five shared tick rows carry round numbers. Same
+/// immediate-mode recipe as <see cref="StripChartControl"/>.
 /// </summary>
 public sealed class OverlayChartControl : Control
 {
-    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> VoltSamplesProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(VoltSamples));
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> PrimarySamplesProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(PrimarySamples));
 
-    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> AmpSamplesProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(AmpSamples));
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> SecondarySamplesProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(SecondarySamples));
 
-    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> WattSamplesProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(WattSamples));
+    public static readonly StyledProperty<IBrush?> PrimaryBrushProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(PrimaryBrush));
+
+    public static readonly StyledProperty<IBrush?> SecondaryBrushProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(SecondaryBrush));
+
+    public static readonly StyledProperty<string> PrimaryUnitProperty =
+        AvaloniaProperty.Register<OverlayChartControl, string>(nameof(PrimaryUnit), "");
+
+    public static readonly StyledProperty<string> SecondaryUnitProperty =
+        AvaloniaProperty.Register<OverlayChartControl, string>(nameof(SecondaryUnit), "");
 
     public static readonly StyledProperty<DateTime> WindowStartProperty =
         AvaloniaProperty.Register<OverlayChartControl, DateTime>(nameof(WindowStart));
@@ -32,17 +41,9 @@ public sealed class OverlayChartControl : Control
     public static readonly StyledProperty<double> WindowSecondsProperty =
         AvaloniaProperty.Register<OverlayChartControl, double>(nameof(WindowSeconds), 3600.0);
 
+    /// <summary>Successive samples further apart than this break the midline (a data gap).</summary>
     public static readonly StyledProperty<double> GapSecondsProperty =
         AvaloniaProperty.Register<OverlayChartControl, double>(nameof(GapSeconds), 15.0);
-
-    public static readonly StyledProperty<IBrush?> VoltBrushProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(VoltBrush));
-
-    public static readonly StyledProperty<IBrush?> AmpBrushProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(AmpBrush));
-
-    public static readonly StyledProperty<IBrush?> WattBrushProperty =
-        AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(WattBrush));
 
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
         AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(GridBrush));
@@ -52,24 +53,26 @@ public sealed class OverlayChartControl : Control
 
     static OverlayChartControl()
     {
-        AffectsRender<OverlayChartControl>(VoltSamplesProperty, AmpSamplesProperty, WattSamplesProperty,
+        AffectsRender<OverlayChartControl>(PrimarySamplesProperty, SecondarySamplesProperty,
+            PrimaryBrushProperty, SecondaryBrushProperty, PrimaryUnitProperty, SecondaryUnitProperty,
             WindowStartProperty, WindowSecondsProperty, GapSecondsProperty,
-            VoltBrushProperty, AmpBrushProperty, WattBrushProperty, GridBrushProperty, LabelBrushProperty);
+            GridBrushProperty, LabelBrushProperty);
     }
 
-    public IReadOnlyList<ChartSample>? VoltSamples { get => GetValue(VoltSamplesProperty); set => SetValue(VoltSamplesProperty, value); }
-    public IReadOnlyList<ChartSample>? AmpSamples { get => GetValue(AmpSamplesProperty); set => SetValue(AmpSamplesProperty, value); }
-    public IReadOnlyList<ChartSample>? WattSamples { get => GetValue(WattSamplesProperty); set => SetValue(WattSamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? PrimarySamples { get => GetValue(PrimarySamplesProperty); set => SetValue(PrimarySamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? SecondarySamples { get => GetValue(SecondarySamplesProperty); set => SetValue(SecondarySamplesProperty, value); }
+    public IBrush? PrimaryBrush { get => GetValue(PrimaryBrushProperty); set => SetValue(PrimaryBrushProperty, value); }
+    public IBrush? SecondaryBrush { get => GetValue(SecondaryBrushProperty); set => SetValue(SecondaryBrushProperty, value); }
+    public string PrimaryUnit { get => GetValue(PrimaryUnitProperty); set => SetValue(PrimaryUnitProperty, value); }
+    public string SecondaryUnit { get => GetValue(SecondaryUnitProperty); set => SetValue(SecondaryUnitProperty, value); }
     public DateTime WindowStart { get => GetValue(WindowStartProperty); set => SetValue(WindowStartProperty, value); }
     public double WindowSeconds { get => GetValue(WindowSecondsProperty); set => SetValue(WindowSecondsProperty, value); }
     public double GapSeconds { get => GetValue(GapSecondsProperty); set => SetValue(GapSecondsProperty, value); }
-    public IBrush? VoltBrush { get => GetValue(VoltBrushProperty); set => SetValue(VoltBrushProperty, value); }
-    public IBrush? AmpBrush { get => GetValue(AmpBrushProperty); set => SetValue(AmpBrushProperty, value); }
-    public IBrush? WattBrush { get => GetValue(WattBrushProperty); set => SetValue(WattBrushProperty, value); }
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
     public IBrush? LabelBrush { get => GetValue(LabelBrushProperty); set => SetValue(LabelBrushProperty, value); }
 
-    private const double MarginLeft = 4, MarginRight = 78, MarginTop = 4, MarginBottom = 18;
+    private const int Ticks = 4;   // intervals; 5 label rows, like the VictronConnect plot
+    private const double MarginLeft = 64, MarginRight = 64, MarginTop = 6, MarginBottom = 18;
 
     private Point? _cursor;
 
@@ -96,25 +99,16 @@ public sealed class OverlayChartControl : Control
             Math.Max(1, bounds.Width - MarginLeft - MarginRight),
             Math.Max(1, bounds.Height - MarginTop - MarginBottom));
 
-        // Same guard as StripChartControl: never draw into a mid-layout sliver — the label
-        // clamps invert their bounds below ~40px and throw.
+        // Never draw into a mid-layout sliver — the label clamps invert their bounds there.
         if (plot.Width < 40 || plot.Height < 20) return;
 
         var grid = GridBrush ?? Palette.CardDimBrush;
         var label = LabelBrush ?? Palette.CardDimBrush;
         var gridPen = new Pen(grid, 1);
 
-        // Band fractions of the plot height per channel (VictronConnect's arrangement): volts
-        // hug the top, amps the bottom, watts between — with a little overlap so busy traces
-        // visibly reach toward each other instead of living in sealed lanes.
-        var series = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Unit, string Fmt, double BandTop, double BandBottom)[]
-        {
-            (VoltSamples, VoltBrush ?? Palette.BlueBrush, "V", "0.00", 0.00, 0.36),
-            (WattSamples, WattBrush ?? Palette.GreenBrush, "W", "0", 0.32, 0.68),
-            (AmpSamples, AmpBrush ?? Palette.OrangeDeepBrush, "A", "0.0", 0.64, 1.00),
-        };
-
-        if (series.All(static s => s.Samples is null || s.Samples.Count == 0))
+        var primary = PrimarySamples;
+        var secondary = SecondarySamples;
+        if ((primary is null || primary.Count == 0) && (secondary is null || secondary.Count == 0))
         {
             ctx.DrawRectangle(gridPen, plot);
             DrawText(ctx, "no data", label, 11, new Point(plot.Center.X, plot.Center.Y), centered: true);
@@ -122,6 +116,17 @@ public sealed class OverlayChartControl : Control
         }
 
         var windowSeconds = Math.Max(1.0, WindowSeconds);
+
+        // Shared gridline rows; each side labels them in its own scale and color.
+        for (var i = 1; i < Ticks; i++)
+        {
+            var y = plot.Bottom - plot.Height * i / Ticks;
+            ctx.DrawLine(gridPen, new Point(plot.X, y), new Point(plot.Right, y));
+        }
+        // A center vertical, like the reference plot's midline.
+        ctx.DrawLine(gridPen, new Point(plot.Center.X, plot.Y), new Point(plot.Center.X, plot.Bottom));
+        ctx.DrawRectangle(gridPen, plot);
+
         for (var i = 0; i <= 2; i++)
         {
             var offset = windowSeconds * i / 2;
@@ -132,100 +137,109 @@ public sealed class OverlayChartControl : Control
                 centered: true, centerYAtTop: true);
         }
 
-        ctx.DrawRectangle(gridPen, plot);
+        DrawSeries(ctx, plot, primary, PrimaryBrush ?? Palette.OrangeDeepBrush, PrimaryUnit,
+            windowSeconds, leftAxis: true);
+        DrawSeries(ctx, plot, secondary, SecondaryBrush ?? Palette.BlueBrush, SecondaryUnit,
+            windowSeconds, leftAxis: false);
 
-        // Each band gets a real scale in its channel's color, VictronConnect-style: gridlines at
-        // nice steps within the band (faded to the channel's tint so three sets of lines read as
-        // three scales, not one grid) and value labels down the right edge.
-        foreach (var (samples, brush, unit, fmt, bandTop, bandBottom) in series)
+        DrawCrosshair(ctx, plot, primary, secondary, windowSeconds);
+    }
+
+    private void DrawSeries(DrawingContext ctx, Rect plot, IReadOnlyList<ChartSample>? samples,
+        IBrush brush, string unit, double windowSeconds, bool leftAxis)
+    {
+        if (samples is null || samples.Count == 0) return;
+
+        var (axisMin, step) = Axis(samples);
+        var span = Ticks * step;
+
+        // Tick labels down this series' side, in its color — the reader attaches numbers to a
+        // trace by color, exactly as VictronConnect does it.
+        var fmt = ChartScale.StepFormat(step);
+        for (var i = 0; i <= Ticks; i++)
         {
-            if (samples is null || samples.Count == 0) continue;
-            var (lo, hi) = PaddedRange(samples);
-            var range = hi - lo;
-            var bandY = plot.Y + bandTop * plot.Height;
-            var bandH = (bandBottom - bandTop) * plot.Height;
-            var step = ChartScale.NiceStep(range);
-            var fmtStep = ChartScale.StepFormat(step);
-            var tickPen = new Pen(Fade(brush, 0.18), 1);
-            for (var y = Math.Ceiling(lo / step) * step; y <= hi; y += step)
-            {
-                var py = bandY + (hi - y) / range * bandH;
-                ctx.DrawLine(tickPen, new Point(plot.X, py), new Point(plot.Right, py));
-                DrawText(ctx, $"{y.ToString(fmtStep, CultureInfo.CurrentCulture)} {unit}", brush, 10,
-                    new Point(plot.Right + 6, py - 6));
-            }
+            var value = axisMin + i * step;
+            var y = plot.Bottom - plot.Height * i / Ticks - 6;
+            var text = $"{value.ToString(fmt, CultureInfo.CurrentCulture)} {unit}";
+            if (leftAxis) DrawTextRight(ctx, text, brush, 10, new Point(plot.X - 6, y));
+            else DrawText(ctx, text, brush, 10, new Point(plot.Right + 6, y));
         }
+
+        Point Map(double offset, double value) => new(
+            plot.X + offset / windowSeconds * plot.Width,
+            plot.Y + (axisMin + span - value) / span * plot.Height);
 
         using (ctx.PushGeometryClip(new RectangleGeometry(plot)))
         {
-            foreach (var (samples, brush, _, _, bandTop, bandBottom) in series)
+            var envPen = new Pen(Fade(brush, 0.4), 1);
+            foreach (var s in samples)
             {
-                if (samples is null || samples.Count == 0) continue;
-                var (lo, hi) = PaddedRange(samples);
-                var range = hi - lo;
-                var bandY = plot.Y + bandTop * plot.Height;
-                var bandH = (bandBottom - bandTop) * plot.Height;
+                if (s.Max - s.Min < 1e-9) continue;
+                ctx.DrawLine(envPen, Map(s.OffsetSeconds, s.Min), Map(s.OffsetSeconds, s.Max));
+            }
 
-                Point Map(double offset, double value) => new(
-                    plot.X + offset / windowSeconds * plot.Width,
-                    bandY + (hi - value) / range * bandH);
-
-                var envPen = new Pen(Fade(brush, 0.4), 1);
+            var linePen = new Pen(brush, 1.6);
+            var geometry = new StreamGeometry();
+            using (var g = geometry.Open())
+            {
+                var penDown = false;
+                double lastOffset = 0;
                 foreach (var s in samples)
                 {
-                    if (s.Max - s.Min < 1e-9) continue;
-                    ctx.DrawLine(envPen, Map(s.OffsetSeconds, s.Min), Map(s.OffsetSeconds, s.Max));
-                }
-
-                var linePen = new Pen(brush, 1.6);
-                var geometry = new StreamGeometry();
-                using (var g = geometry.Open())
-                {
-                    var penDown = false;
-                    double lastOffset = 0;
-                    foreach (var s in samples)
+                    var p = Map(s.OffsetSeconds, (s.Min + s.Max) / 2);
+                    if (!penDown || s.OffsetSeconds - lastOffset > GapSeconds)
                     {
-                        var p = Map(s.OffsetSeconds, (s.Min + s.Max) / 2);
-                        if (!penDown || s.OffsetSeconds - lastOffset > GapSeconds)
-                        {
-                            g.BeginFigure(p, isFilled: false);
-                            penDown = true;
-                        }
-                        else
-                        {
-                            g.LineTo(p);
-                        }
-                        lastOffset = s.OffsetSeconds;
+                        g.BeginFigure(p, isFilled: false);
+                        penDown = true;
                     }
-                    g.EndFigure(false);
+                    else
+                    {
+                        g.LineTo(p);
+                    }
+                    lastOffset = s.OffsetSeconds;
                 }
-                ctx.DrawGeometry(null, linePen, geometry);
+                g.EndFigure(false);
             }
-        }
-
-        // Hover crosshair: one readout box with all three channels at the cursor's moment,
-        // each line in its trace's color.
-        if (_cursor is { } cursor && plot.Contains(cursor))
-        {
-            var offset = (cursor.X - plot.X) / plot.Width * windowSeconds;
-            var tolerance = Math.Max(GapSeconds, windowSeconds / plot.Width * 4);
-            var lines = new List<ChartCrosshair.Line>();
-            double? snappedOffset = null;
-            foreach (var (samples, brush, unit, fmt, _, _) in series)
-            {
-                if (ChartCrosshair.Nearest(samples, offset, tolerance) is not { } s) continue;
-                snappedOffset ??= s.OffsetSeconds;
-                lines.Add(new ChartCrosshair.Line(ChartCrosshair.Describe(s, fmt, unit), brush));
-            }
-            if (lines.Count > 0 && snappedOffset is { } snap)
-            {
-                var x = plot.X + snap / windowSeconds * plot.Width;
-                ChartCrosshair.Draw(ctx, plot, x, WindowStart.AddSeconds(snap), lines, grid);
-            }
+            ctx.DrawGeometry(null, linePen, geometry);
         }
     }
 
-    private static (double lo, double hi) PaddedRange(IReadOnlyList<ChartSample> samples)
+    private void DrawCrosshair(DrawingContext ctx, Rect plot, IReadOnlyList<ChartSample>? primary,
+        IReadOnlyList<ChartSample>? secondary, double windowSeconds)
+    {
+        if (_cursor is not { } cursor || !plot.Contains(cursor)) return;
+
+        var offset = (cursor.X - plot.X) / plot.Width * windowSeconds;
+        var tolerance = Math.Max(GapSeconds, windowSeconds / plot.Width * 4);
+        var lines = new List<ChartCrosshair.Line>();
+        double? snappedOffset = null;
+
+        var sides = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Unit)[]
+        {
+            (primary, PrimaryBrush ?? Palette.OrangeDeepBrush, PrimaryUnit),
+            (secondary, SecondaryBrush ?? Palette.BlueBrush, SecondaryUnit),
+        };
+        foreach (var (samples, brush, unit) in sides)
+        {
+            if (ChartCrosshair.Nearest(samples, offset, tolerance) is not { } s) continue;
+            snappedOffset ??= s.OffsetSeconds;
+            var fmt = unit switch { "V" => "0.00", "A" => "0.00", _ => "0" };
+            lines.Add(new ChartCrosshair.Line(ChartCrosshair.Describe(s, fmt, unit), brush));
+        }
+        if (lines.Count > 0 && snappedOffset is { } snap)
+        {
+            var x = plot.X + snap / windowSeconds * plot.Width;
+            ChartCrosshair.Draw(ctx, plot, x, WindowStart.AddSeconds(snap), lines,
+                GridBrush ?? Palette.CardDimBrush);
+        }
+    }
+
+    /// <summary>
+    /// Axis for one series: a nice step and a floor such that <see cref="Ticks"/> intervals of
+    /// that step cover the padded data range — so the shared gridline rows carry round numbers
+    /// on both sides even though the sides have unrelated scales.
+    /// </summary>
+    private static (double Min, double Step) Axis(IReadOnlyList<ChartSample> samples)
     {
         var lo = double.MaxValue;
         var hi = double.MinValue;
@@ -234,13 +248,24 @@ public sealed class OverlayChartControl : Control
             if (s.Min < lo) lo = s.Min;
             if (s.Max > hi) hi = s.Max;
         }
-        // The same padding the band Map uses, so gridline labels and trace share one scale.
-        var pad = Math.Max((hi - lo) * 0.06, 0.02);
-        return (lo - pad, hi + pad);
+        if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }   // a flat line still needs a scale
+
+        // step ≥ range/(Ticks−1) guarantees floor(lo) + Ticks·step ≥ hi.
+        var step = NiceCeil((hi - lo) / (Ticks - 1));
+        var min = Math.Floor(lo / step) * step;
+        while (min + Ticks * step < hi) step = NiceCeil(step * 1.01);   // belt for float edges
+        return (min, step);
     }
 
-    /// <summary>A reduced-opacity tint of a solid brush — 0.4 for envelope strokes, 0.18 for a
-    /// band's gridlines, so three overlapping scales read as texture instead of mud.</summary>
+    /// <summary>Smallest 1/2/5×10ⁿ value ≥ <paramref name="raw"/>.</summary>
+    private static double NiceCeil(double raw)
+    {
+        var mag = Math.Pow(10, Math.Floor(Math.Log10(Math.Max(raw, 1e-12))));
+        foreach (var m in new[] { 1.0, 2.0, 5.0 })
+            if (raw <= m * mag) return m * mag;
+        return 10 * mag;
+    }
+
     private static IBrush Fade(IBrush brush, double opacity) =>
         brush is ISolidColorBrush s ? new SolidColorBrush(s.Color, opacity) : brush;
 
@@ -253,5 +278,12 @@ public sealed class OverlayChartControl : Control
             ? new Point(at.X - ft.Width / 2, centerYAtTop ? at.Y : at.Y - ft.Height / 2)
             : at;
         ctx.DrawText(ft, origin);
+    }
+
+    private static void DrawTextRight(DrawingContext ctx, string text, IBrush brush, double size, Point rightEdge)
+    {
+        var ft = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            Typeface.Default, size, brush);
+        ctx.DrawText(ft, new Point(rightEdge.X - ft.Width, rightEdge.Y));
     }
 }

@@ -1,8 +1,17 @@
+using Avalonia.Media;
 using Avalonia.Threading;
 using ShackPower.App.Services;
 using ShackPower.Core;
 
 namespace ShackPower.App.ViewModels;
+
+/// <summary>A chartable channel — the combined view overlays exactly two of these.</summary>
+public enum ChartChannel
+{
+    Volts,
+    Amps,
+    Watts,
+}
 
 /// <summary>
 /// The Chart window's model: a selected day (today = live, following the ring) and a window
@@ -43,8 +52,9 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
     public string DayText => IsToday ? "Today" : _day.ToString("ddd yyyy-MM-dd");
 
     private bool _combined;
-    /// <summary>All three channels overlaid on one tall plot (each on its own scale) instead of
-    /// three stacked strips. A presentation toggle only — the decimated data is shared.</summary>
+    /// <summary>Two chosen channels overlaid full-height with dual color-matched axes (the
+    /// VictronConnect Trends arrangement) instead of three stacked strips. A presentation
+    /// toggle only — the decimated data is shared.</summary>
     public bool Combined
     {
         get => _combined;
@@ -56,6 +66,64 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
 
     /// <summary>Inverse of <see cref="Combined"/> for the stacked panel's visibility binding.</summary>
     public bool Split => !_combined;
+
+    // ---- combined view's two channel pickers (Trends-style) ----
+
+    public static ChartChannel[] Channels { get; } = Enum.GetValues<ChartChannel>();
+
+    private ChartChannel _primaryChannel = ChartChannel.Amps;      // the reference plot's pairing
+    public ChartChannel PrimaryChannel
+    {
+        get => _primaryChannel;
+        set { if (SetProperty(ref _primaryChannel, value)) RaiseChannelViews(); }
+    }
+
+    private ChartChannel _secondaryChannel = ChartChannel.Volts;
+    public ChartChannel SecondaryChannel
+    {
+        get => _secondaryChannel;
+        set { if (SetProperty(ref _secondaryChannel, value)) RaiseChannelViews(); }
+    }
+
+    public IReadOnlyList<ChartSample> PrimarySamples => SamplesFor(_primaryChannel);
+    public IReadOnlyList<ChartSample> SecondarySamples => SamplesFor(_secondaryChannel);
+    public IBrush PrimaryBrush => BrushFor(_primaryChannel);
+    public IBrush SecondaryBrush => BrushFor(_secondaryChannel);
+    public string PrimaryUnit => UnitFor(_primaryChannel);
+    public string SecondaryUnit => UnitFor(_secondaryChannel);
+
+    private IReadOnlyList<ChartSample> SamplesFor(ChartChannel c) => c switch
+    {
+        ChartChannel.Volts => VoltSamples,
+        ChartChannel.Amps => AmpSamples,
+        _ => WattSamples,
+    };
+
+    /// <summary>Channel colors match the split view's strips, so a trace means the same thing
+    /// in both presentations.</summary>
+    private static IBrush BrushFor(ChartChannel c) => c switch
+    {
+        ChartChannel.Volts => Palette.BlueBrush,
+        ChartChannel.Amps => Palette.OrangeDeepBrush,
+        _ => Palette.GreenBrush,
+    };
+
+    private static string UnitFor(ChartChannel c) => c switch
+    {
+        ChartChannel.Volts => "V",
+        ChartChannel.Amps => "A",
+        _ => "W",
+    };
+
+    private void RaiseChannelViews()
+    {
+        OnPropertyChanged(nameof(PrimarySamples));
+        OnPropertyChanged(nameof(SecondarySamples));
+        OnPropertyChanged(nameof(PrimaryBrush));
+        OnPropertyChanged(nameof(SecondaryBrush));
+        OnPropertyChanged(nameof(PrimaryUnit));
+        OnPropertyChanged(nameof(SecondaryUnit));
+    }
 
     private double _liveWindowSeconds = 3600;
 
@@ -148,6 +216,8 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
         VoltSamples = ChartSampler.Decimate(entries, e => e.Volts, start, seconds, Buckets);
         AmpSamples = ChartSampler.Decimate(entries, e => e.Amps, start, seconds, Buckets);
         WattSamples = ChartSampler.Decimate(entries, e => e.Watts, start, seconds, Buckets);
+        OnPropertyChanged(nameof(PrimarySamples));
+        OnPropertyChanged(nameof(SecondarySamples));
     }
 
     public void Dispose() => _history.ReadingTick -= OnReadingTick;

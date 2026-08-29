@@ -27,10 +27,11 @@ power architecture these serve are in `docs/power-system.md` — read that first
   discharge is this shack's normal operating mode (charger-off-on-the-air routine). Toast/sound
   when unattended; ties into the always-on-station-box watchdog idea from the pre-plan scope
   talk.
-- **Combined chart rethink.** David's verdict on the v0.1.1 combined view: "still a mess" —
-  three color-tinted scales fighting on one canvas. Parked deliberately (2026-08-28) rather
-  than tweaked further; redesign once, for the multi-device future (load + battery + SOC
-  series), not twice. Split view is the daily driver meanwhile.
+- **Combined chart, multi-device follow-up.** The v0.1.2 rebuild (VictronConnect Trends style:
+  two channels, dual color-matched axes) resolved David's "still a mess" verdict on v0.1.1's
+  three-band attempt — two-at-a-time is the load-bearing lesson. When multi-device lands, the
+  channel pickers grow entries per device/role (battery amps, SOC, charger watts…); the
+  two-channel constraint stays.
 
 ## Smaller / standing
 

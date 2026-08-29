@@ -16,8 +16,12 @@ public sealed class AppConfig
     public double? ChartW { get; set; }
     public double? ChartH { get; set; }
 
-    /// <summary>Chart window presentation: true = all channels overlaid on one plot.</summary>
+    /// <summary>Chart window presentation: true = the two-channel dual-axis Trends view.</summary>
     public bool ChartCombined { get; set; }
+
+    /// <summary>Combined view's channel picks (ChartChannel names; unknown values fall back).</summary>
+    public string? ChartPrimary { get; set; }
+    public string? ChartSecondary { get; set; }
 
     /// <summary>Which Setup tab was showing, so it reopens where it was left. Clamped on load.</summary>
     public int SetupTab { get; set; }

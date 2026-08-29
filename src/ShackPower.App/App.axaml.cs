@@ -149,6 +149,8 @@ public partial class App : Application
         if (_chartWindow is null)
         {
             _chartVm = new ChartViewModel(_chartHistory) { Combined = _config.ChartCombined };
+            if (Enum.TryParse<ChartChannel>(_config.ChartPrimary, out var cp)) _chartVm.PrimaryChannel = cp;
+            if (Enum.TryParse<ChartChannel>(_config.ChartSecondary, out var cs)) _chartVm.SecondaryChannel = cs;
             _chartWindow = new ChartWindow { DataContext = _chartVm, Topmost = _display.AlwaysOnTop };
             RestoreChartBounds(_chartWindow);
             _chartWindow.Show(_mainWindow);   // owned by main -> closes with it
@@ -166,11 +168,18 @@ public partial class App : Application
         _config.ChartY = w.Position.Y;
         _config.ChartW = w.Width;
         _config.ChartH = w.Height;
-        if (_chartVm is not null) _config.ChartCombined = _chartVm.Combined;
+        if (_chartVm is not null) CaptureChartPrefs(_chartVm);
         // Unhook so a closed window isn't still re-decimating on every reading.
         _chartVm?.Dispose();
         _chartVm = null;
         _chartWindow = null;
+    }
+
+    private void CaptureChartPrefs(ChartViewModel vm)
+    {
+        _config.ChartCombined = vm.Combined;
+        _config.ChartPrimary = vm.PrimaryChannel.ToString();
+        _config.ChartSecondary = vm.SecondaryChannel.ToString();
     }
 
     private void RestoreChartBounds(Window w)
@@ -406,7 +415,7 @@ public partial class App : Application
                 _config.ChartY = _chartWindow.Position.Y;
                 _config.ChartW = _chartWindow.Width;
                 _config.ChartH = _chartWindow.Height;
-                if (_chartVm is not null) _config.ChartCombined = _chartVm.Combined;
+                if (_chartVm is not null) CaptureChartPrefs(_chartVm);
             }
             // Don't let a --sim run overwrite the real connection identity.
             if (!_meter.IsSimulated)
