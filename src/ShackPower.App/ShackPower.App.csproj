@@ -10,7 +10,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>ShackPower</AssemblyName>
-    <Version>0.1.7-beta</Version>
+    <Version>0.1.8-beta</Version>
     <Product>Shack Power</Product>
     <Authors>David Erickson (AB0R)</Authors>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>

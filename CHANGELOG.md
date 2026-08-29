@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## v0.1.8-beta — 2026-08-28
+
+- Zoom buttons settled: slightly translucent round pair, horizontal, centered between the
+  combined view's channel pickers (split view zooms by wheel and presets)
+
 ## v0.1.7-beta — 2026-08-28
 
 - The zoom pair became round Victron-blue buttons floating over the chart's bottom-right

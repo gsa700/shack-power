@@ -16,6 +16,8 @@
       <Setter Property="Width" Value="44"/>
       <Setter Property="Height" Value="44"/>
       <Setter Property="CornerRadius" Value="22"/>
+      <!-- Slightly translucent at rest so the trace stays readable underneath; solid on hover. -->
+      <Setter Property="Opacity" Value="0.72"/>
       <Setter Property="Background" Value="{StaticResource BgBrush}"/>
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
       <Setter Property="FontSize" Value="20"/>
@@ -23,6 +25,9 @@
       <Setter Property="Padding" Value="0"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.zoomfab:pointerover">
+      <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="Button.zoomfab:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{StaticResource TrackBrush}"/>
@@ -97,12 +102,20 @@
     <Border Grid.Row="1" Background="{StaticResource PanelBrush}" CornerRadius="8"
             Padding="10" Margin="0,10,0,0" IsVisible="{Binding Combined}">
       <Grid RowDefinitions="Auto,*">
-        <!-- Channel pickers, bordered in their trace's color like the reference app. -->
+        <!-- Channel pickers, bordered in their trace's color like the reference app; the zoom
+             pair sits centered between them. -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
           <ComboBox Grid.Column="0" ItemsSource="{Binding Channels}"
                     SelectedItem="{Binding PrimaryChannel}" MinWidth="130"
                     BorderBrush="{Binding PrimaryBrush}" BorderThickness="2"
                     Foreground="{Binding PrimaryBrush}"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                      HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Button Classes="zoomfab" Content="−" Command="{Binding ZoomOutCommand}"
+                    ToolTip.Tip="Zoom out (mouse wheel on the chart works too)"/>
+            <Button Classes="zoomfab" Content="+" Command="{Binding ZoomInCommand}"
+                    ToolTip.Tip="Zoom in — down to a one-minute window"/>
+          </StackPanel>
           <ComboBox Grid.Column="2" ItemsSource="{Binding Channels}"
                     SelectedItem="{Binding SecondaryChannel}" MinWidth="130"
                     BorderBrush="{Binding SecondaryBrush}" BorderThickness="2"
@@ -119,16 +132,6 @@
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
       </Grid>
     </Border>
-
-    <!-- Floating zoom pair, overlaying whichever chart panel is visible. Bottom-right, clear
-         of the right-edge axis labels and the time row. -->
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" ZIndex="5"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,84,40">
-      <Button Classes="zoomfab" Content="−" Command="{Binding ZoomOutCommand}"
-              ToolTip.Tip="Zoom out (mouse wheel on the chart works too)"/>
-      <Button Classes="zoomfab" Content="+" Command="{Binding ZoomInCommand}"
-              ToolTip.Tip="Zoom in — down to a one-minute window"/>
-    </StackPanel>
 
   </Grid>
 </Window>
