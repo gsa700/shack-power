@@ -12,9 +12,10 @@ power architecture these serve are in `docs/power-system.md` — read that first
   Battery-role device exists; per-role daily CSVs (today's files become the Load history,
   untouched). A `MON 0` shunt is presumptively Battery, `MON 1` Load — suggest, let the user
   override. Sequencing question deliberately open: build against `--sim` before the second
-  shunt exists, or wait for hardware. MPPT/IP43 charger field parsing (VPV/PPV/CS/ERR) belongs
-  here too — same wire protocol, type-specific fields — even though this station's charger is
-  Bluetooth-only.
+  shunt exists, or wait for hardware. **MPPT charger field parsing (VPV/PPV/CS/ERR) is
+  first-class here, not a side note** — the decided topology puts a SmartSolar 100/30 on
+  VE.Direct in this shack, so the Charger role gets real hardware to develop against, and
+  ON MAINS becomes the charger's own state field rather than an inference.
 - **Charger control via local smart plug + SOC-window automation** (post multi-device). A
   local-HTTP smart plug (Shelly-class, no cloud) on the charger's AC cord; the app gains a
   Charger toggle ("quiet mode" — charger off while operating) and SOC-window charging: on
