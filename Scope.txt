@@ -8,3 +8,7 @@ adding a battery or bank of batteries would require a second shunt.
 
 how to distinguish between them? sum and total? or?
 
+how to isolate the battery? is there an RF quiet option to manage switching between the line power and battery? should we use some type of inverter/charger rather than a power supply?
+
+more questions than answers here...
+

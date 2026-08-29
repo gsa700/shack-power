@@ -46,10 +46,19 @@ public partial class App : Application
             var openChart = Environment.GetCommandLineArgs()
                 .Any(a => a.Equals("--chart", StringComparison.OrdinalIgnoreCase));
             _meter = new MeterService(simulated);
-            _logging = new PowerLoggingService(_meter, ConfigStore.LogDir, _config.LogEnabled);
+            // A --sim run NEVER writes the real log: synthetic rows interleaved into genuine
+            // operating history are pollution nothing downstream can reliably separate out
+            // (learned the hard way on cutover day — dev sim sessions salted the live CSV).
+            // Sim runs log to a sibling logs-sim directory instead, so the writer path still
+            // gets exercised and the Logging tab stays honest about where rows are going.
+            var logDir = simulated
+                ? System.IO.Path.Combine(ConfigStore.DataDir, "logs-sim")
+                : ConfigStore.LogDir;
+            _logging = new PowerLoggingService(_meter, logDir, _config.LogEnabled);
             // Created at startup, not on first window open, so the live tail exists by the time
-            // the Chart window is opened rather than starting empty.
-            _chartHistory = new ChartHistoryService(_meter, ConfigStore.LogDir);
+            // the Chart window is opened rather than starting empty. Reads the same directory
+            // logging writes, so a sim chart browses sim history, never the real files.
+            _chartHistory = new ChartHistoryService(_meter, logDir);
             _setupVm = new SetupViewModel(_meter, _display, _logging, ExitForUpdate)
             {
                 CheckUpdatesAtStartup = _config.CheckUpdatesAtStartup,
