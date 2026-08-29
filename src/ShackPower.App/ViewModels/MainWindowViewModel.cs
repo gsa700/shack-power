@@ -38,7 +38,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
 
     public DisplaySettings Display { get; }
 
-    public string TitleText => "SHACK POWER";
+    // Not the app name — the title bar already says that right above. This header names what
+    // the numbers are: the DC side of the station.
+    public string TitleText => "DC POWER";
 
     /// <summary>Dim the readouts when the feed goes stale so frozen values don't read as live.</summary>
     public double ReadoutOpacity => _meter is { IsConnected: true, IsStale: true } ? 0.55 : 1.0;
