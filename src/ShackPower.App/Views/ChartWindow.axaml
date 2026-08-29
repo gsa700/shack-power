@@ -9,6 +9,33 @@
         Icon="/Assets/app-icon.png"
         Title="Shack Power Chart">
 
+  <!-- Round floating zoom buttons (VictronConnect-style FABs). The Fluent hover repaint is
+       overridden per state so the circle stays Victron blue instead of flashing gray. -->
+  <Window.Styles>
+    <Style Selector="Button.zoomfab">
+      <Setter Property="Width" Value="44"/>
+      <Setter Property="Height" Value="44"/>
+      <Setter Property="CornerRadius" Value="22"/>
+      <Setter Property="Background" Value="{StaticResource BgBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+      <Setter Property="FontSize" Value="20"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.zoomfab:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource TrackBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+      <Setter Property="CornerRadius" Value="22"/>
+    </Style>
+    <Style Selector="Button.zoomfab:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ShadowBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+      <Setter Property="CornerRadius" Value="22"/>
+    </Style>
+  </Window.Styles>
+
   <Grid RowDefinitions="Auto,*" Margin="12">
 
     <!-- Toolbar: day paging on the left, window presets on the right. -->
@@ -16,10 +43,6 @@
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
         <ToggleButton Content="Combined" IsChecked="{Binding Combined}"
                       ToolTip.Tip="Overlay two chosen channels on one plot, each on its own scale"/>
-        <Button Content="−" Command="{Binding ZoomOutCommand}" MinWidth="34" Margin="8,0,0,0"
-                ToolTip.Tip="Zoom out (mouse wheel on the chart works too)"/>
-        <Button Content="+" Command="{Binding ZoomInCommand}" MinWidth="34"
-                ToolTip.Tip="Zoom in — down to a one-minute window"/>
         <Button Content="1 h" Command="{Binding Window1HCommand}" Margin="8,0,0,0"/>
         <Button Content="6 h" Command="{Binding Window6HCommand}"/>
         <Button Content="24 h" Command="{Binding Window24HCommand}"/>
@@ -96,6 +119,16 @@
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
       </Grid>
     </Border>
+
+    <!-- Floating zoom pair, overlaying whichever chart panel is visible. Bottom-right, clear
+         of the right-edge axis labels and the time row. -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" ZIndex="5"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,84,40">
+      <Button Classes="zoomfab" Content="−" Command="{Binding ZoomOutCommand}"
+              ToolTip.Tip="Zoom out (mouse wheel on the chart works too)"/>
+      <Button Classes="zoomfab" Content="+" Command="{Binding ZoomInCommand}"
+              ToolTip.Tip="Zoom in — down to a one-minute window"/>
+    </StackPanel>
 
   </Grid>
 </Window>

@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## v0.1.7-beta — 2026-08-28
+
+- The zoom pair became round Victron-blue buttons floating over the chart's bottom-right
+  corner (VictronConnect-style), replacing the toolbar buttons from v0.1.6
+
 ## v0.1.6-beta — 2026-08-28
 
 - Zoom − / + buttons in the chart toolbar (center-anchored, chunkier steps than the wheel)
