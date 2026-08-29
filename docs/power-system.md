@@ -22,26 +22,33 @@ Bluetooth (which coexists fine with this app's serial connection — verified li
 ## Recommended backup topology: DC-coupled, combiner-free (decided 2026-08-28)
 
 ```
-mains AC ──[smart plug*]──> 24 V supply ──> SmartSolar MPPT 100/30 ──> LiFePO4 battery ──> loads
-                        (Mean Well LRS-350-24-class)  │ VE.Direct           │
-                                                      └──> the app       SmartShunt
-                                                                    (battery-monitor mode)
+mains AC ──[smart plug*]──> Mean Well LRS-600-48 ──> SmartSolar MPPT 100/30 ──> LiFePO4 ──> loads
+                            (48 V, 600 W, fanless)        │ VE.Direct              │
+                                                          └──> the app          SmartShunt
+                                                                        (battery-monitor mode)
 ```
 \* smart plug is the future charger-control hook — see BACKLOG.
 
 Loads live on the battery bus permanently, so a mains failure is a non-event: nothing switches,
 nothing drops. The charger carries the steady load and recharge; the battery buffers TX peaks.
 
-- **Charger: Victron SmartSolar MPPT 100/30, fed by a fixed 24 V supply on the PV input.** The
-  MPPT doesn't care that the "panel" is a power brick — but it does need the input ~5 V above
-  battery voltage to start (hence 24 V; a 13.8 V shack PSU can never drive it), and 100 V is
-  the PV-input *maximum*, not a requirement. Size the brick so the tracker can't drag it into
-  current-limit foldback: 20 A charge at ~13.5 V is ~280 W, so a 350 W unit leaves margin.
-  Charge current capped in VictronConnect at the battery's rating (the 40 Ah Bioenno wants
-  ≤20 A). Why this over a one-box AC charger: **it has VE.Direct**, so the app sees charge
-  state (bulk/absorption/float), input power and errors directly — and real panels can land on
-  the PV input someday with zero re-architecture. Priced with the brick at-or-under the
-  one-box option.
+- **Charger: Victron SmartSolar MPPT 100/30, fed by a Mean Well LRS-600-48 on the PV input**
+  (decided 2026-08-28, superseding the 24 V/350 W first cut). The MPPT doesn't care that the
+  "panel" is a power brick — but it does need the input ~5 V above *battery* voltage to start
+  (a 13.8 V shack PSU can never drive it), and 100 V is the PV-input *maximum*, not a
+  requirement. Why 48 V over 24 V: it keeps a future **24 V battery bank** possible (a 24 V
+  bank absorbing at ~28.8 V needs 34 V+ input, which kills a 24 V feed), and halves the input
+  current; the slightly larger buck ratio costs a negligible point of efficiency. Why 600 W:
+  the MPPT's full 30 A at 14.4 V absorption is ~455 W of input, and ~30% headroom keeps the
+  tracker from ever dragging the supply into current-limit foldback — the one failure mode of
+  the PSU-as-panel arrangement. The LRS-600 is free-air convection like the LRS-350: **no fan,
+  silent** — give the case some convection room and don't entomb it at full load. Do NOT
+  parallel non-current-sharing supplies to get power; one bigger unit (or a series stack of
+  identical ones) is the correct shape. Charge current capped in VictronConnect at the
+  battery's rating (the 40 Ah Bioenno wants ≤20 A; the full 30 A waits for the bigger bank).
+  Why an MPPT over a one-box AC charger: **it has VE.Direct**, so the app sees charge state
+  (bulk/absorption/float), input power and errors directly — and real panels can land on the
+  PV input someday with zero re-architecture.
 - **Battery:** Bioenno 40 Ah LiFePO4 now (~6+ h at the bench's ~6 A draw); larger bank planned
   for extended no-charge runtime.
 - **RF-silent operating mode:** charger chain OFF while on the air — pure battery is the
