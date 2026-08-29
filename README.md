@@ -22,7 +22,7 @@ Part of the AB0R station-tools family alongside
 - History charts: live tail plus browsing past days
 - Tabbed Setup: connection, logging, display, updates
 - Optional minimize-to-tray
-- `--sim` mode for running without hardware
+- `--sim` mode for running without hardware?
 
 ## Building
 
