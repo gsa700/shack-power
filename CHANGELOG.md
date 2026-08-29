@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## v0.1.6-beta — 2026-08-28
+
+- Zoom − / + buttons in the chart toolbar (center-anchored, chunkier steps than the wheel)
+
 ## v0.1.5-beta — 2026-08-28
 
 - Progressive zoom and pan on both chart views: mouse wheel zooms ~30% per notch, from the

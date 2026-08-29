@@ -37,6 +37,10 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
         Window1HCommand = new RelayCommand(() => SetWindow(3600));
         Window6HCommand = new RelayCommand(() => SetWindow(6 * 3600));
         Window24HCommand = new RelayCommand(() => SetWindow(24 * 3600));
+        // Chunkier steps than the wheel's 1.3 — a button click is a deliberate act. Centered
+        // anchor: browse zooms around the middle of the view; live ignores it (tail-pinned).
+        ZoomInCommand = new RelayCommand(() => ZoomAt(0.5, 1 / 1.5));
+        ZoomOutCommand = new RelayCommand(() => ZoomAt(0.5, 1.5));
 
         LoadDay(DateOnly.FromDateTime(DateTime.Now));
     }
@@ -46,6 +50,8 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
     public RelayCommand Window1HCommand { get; }
     public RelayCommand Window6HCommand { get; }
     public RelayCommand Window24HCommand { get; }
+    public RelayCommand ZoomInCommand { get; }
+    public RelayCommand ZoomOutCommand { get; }
 
     private DateOnly _day;
     public bool IsToday => _day == DateOnly.FromDateTime(DateTime.Now);

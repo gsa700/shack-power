@@ -15,7 +15,11 @@
     <DockPanel Grid.Row="0">
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
         <ToggleButton Content="Combined" IsChecked="{Binding Combined}"
-                      ToolTip.Tip="Overlay all three channels on one plot, each on its own scale"/>
+                      ToolTip.Tip="Overlay two chosen channels on one plot, each on its own scale"/>
+        <Button Content="−" Command="{Binding ZoomOutCommand}" MinWidth="34" Margin="8,0,0,0"
+                ToolTip.Tip="Zoom out (mouse wheel on the chart works too)"/>
+        <Button Content="+" Command="{Binding ZoomInCommand}" MinWidth="34"
+                ToolTip.Tip="Zoom in — down to a one-minute window"/>
         <Button Content="1 h" Command="{Binding Window1HCommand}" Margin="8,0,0,0"/>
         <Button Content="6 h" Command="{Binding Window6HCommand}"/>
         <Button Content="24 h" Command="{Binding Window24HCommand}"/>
