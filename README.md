@@ -8,6 +8,14 @@ port while open and offers no logging. Shack Power opens exactly one port (pinne
 VE.Direct cable's chip serial, so COM renumbering doesn't matter), parses the SmartShunt's
 1 Hz broadcast with checksum validation, and reconnects by itself across unplugs and sleep/resume.
 
+**Scope:** Shack Power monitors; VictronConnect (on your phone, over Bluetooth — they coexist)
+configures. The baseline is one SmartShunt in DC energy-meter mode watching the station supply.
+For shacks with battery backup, the roadmap adds multiple VE.Direct devices by role — a
+battery-monitor shunt bringing state-of-charge and time-to-go, and eventually charge management.
+The recommended backup topology this serves (AC charger → LiFePO4 → loads, no combiner, charger
+off while operating for total RF silence) is written up in
+[docs/power-system.md](docs/power-system.md).
+
 Part of the AB0R station-tools family alongside
 [W2 Monitor](https://github.com/gsa700/w2-monitor-x) and
 [LP-100A Monitor](https://github.com/gsa700/lp100a-monitor), and shares their architecture:

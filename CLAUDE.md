@@ -15,6 +15,17 @@ This app replaced the Python prototype at `~/shack-power-monitor/shack_power_mon
 COM port). The prototype's daily CSVs were byte-compatible by design and were copied into the
 data dir, so history is continuous across the handover; its folder is kept for reference.
 
+## Scope
+
+**Shack Power monitors; VictronConnect (on the phone, over Bluetooth) configures.** Real-time
+monitoring of a ham shack's DC power system: today one SmartShunt in DC-meter mode on the
+station bus; the roadmap is N VE.Direct devices distinguished by configured **role**
+(Load / Battery / Supply / Charger), never blind summation. Not a configurator, not Bluetooth,
+not an AC-side or whole-Victron-ecosystem dashboard. The full scope statement, the recommended
+backup topology (charger → battery → loads, combiner-free, charger-off operating as the
+RF-silent mode), and the reasoning behind rejected alternatives live in
+**`docs/power-system.md`** — read it before touching the roadmap items in `BACKLOG.md`.
+
 ## Build / run / test
 
 ```sh
