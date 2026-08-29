@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## v0.1.4-beta — 2026-08-28
+
+- Main window: the status line is gone — the connection dot is the whole story at a glance,
+  its hover tooltip carries the detail (port, reconnecting, no data), and Setup has the rest
+
 ## v0.1.3-beta — 2026-08-28
 
 - The hover readout on both chart views now always shows all three channels (V / A / W, each

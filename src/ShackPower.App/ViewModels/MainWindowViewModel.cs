@@ -84,10 +84,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     public string AlarmText { get => _alarmText; private set => SetProperty(ref _alarmText, value); }
 
     private string _statusText = "Disconnected";
+    /// <summary>The connection dot's hover tooltip — the only place the main window spells the
+    /// connection out; the full picture lives in Setup.</summary>
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
-
-    private IBrush _statusBrush = Palette.DimBrush;
-    public IBrush StatusBrush { get => _statusBrush; private set => SetProperty(ref _statusBrush, value); }
 
     private IBrush _connDotBrush = Palette.DimBrush;
     public IBrush ConnDotBrush { get => _connDotBrush; private set => SetProperty(ref _connDotBrush, value); }
@@ -97,9 +96,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         var stale = _meter is { IsConnected: true, IsStale: true };
         StatusText = stale ? $"{_meter.Status} — no data" : _meter.Status;
         // Soft tints on the blue ground; full-strength red/green vibrate against it.
-        StatusBrush = _meter.StatusIsError ? Palette.RedSoftBrush
-            : stale ? Palette.OrangeBrush
-            : _meter.IsConnected ? Palette.GreenSoftBrush : Palette.DimBrush;
         ConnDotBrush = _meter.StatusIsError ? Palette.RedSoftBrush
             : _meter is { IsConnected: true, IsStale: false, Current: not null } ? Palette.GreenSoftBrush
             : _meter.IsConnected ? Palette.OrangeBrush : Palette.DimBrush;

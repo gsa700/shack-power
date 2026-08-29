@@ -8,14 +8,16 @@
         Icon="/Assets/app-icon.png"
         Title="Shack Power">
 
-  <Grid Margin="16,12" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+  <Grid Margin="16,12" RowDefinitions="Auto,Auto,Auto,Auto">
 
     <!-- Header -->
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
       <TextBlock Grid.Column="0" Text="{Binding TitleText}" FontSize="18" FontWeight="Bold"
                  Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+      <!-- The dot is the whole connection UI; hovering it tells the story, Setup has the rest. -->
       <Ellipse Grid.Column="1" Width="12" Height="12" Fill="{Binding ConnDotBrush}"
-               VerticalAlignment="Center" Margin="0,0,10,0"/>
+               VerticalAlignment="Center" Margin="0,0,10,0"
+               ToolTip.Tip="{Binding StatusText}"/>
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
         <Button Content="Chart" Click="OnChartClick" VerticalAlignment="Center"/>
         <Button Content="Setup" Click="OnSetupClick" VerticalAlignment="Center"/>
@@ -87,10 +89,6 @@
                    Foreground="{StaticResource DimBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
       </Grid>
     </StackPanel>
-
-    <!-- Status line -->
-    <TextBlock Grid.Row="4" Text="{Binding StatusText}" FontSize="12"
-               Foreground="{Binding StatusBrush}" Margin="0,4,0,0"/>
 
   </Grid>
 </Window>
