@@ -30,7 +30,8 @@ Part of the AB0R station-tools family alongside
 - History charts: live tail plus browsing past days
 - Tabbed Setup: connection, logging, display, updates
 - Optional minimize-to-tray
-- `--sim` mode for running without hardware?
+- `--sim` mode: the full app on a synthetic SmartShunt — no hardware, no serial port, and its
+  logs go to a separate `logs-sim` folder so demo data can never mix into real history
 
 ## Building
 
