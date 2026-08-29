@@ -137,20 +137,23 @@ public sealed class OverlayChartControl : Control
                 centered: true, centerYAtTop: true);
         }
 
+        // The reference app separates the scaling so the traces don't ride on top of each
+        // other: each axis range gets extra room on one side, parking the secondary's trace in
+        // the upper half and the primary's in the lower (volts over amps with the defaults).
         DrawSeries(ctx, plot, primary, PrimaryBrush ?? Palette.OrangeDeepBrush, PrimaryUnit,
-            windowSeconds, leftAxis: true);
+            windowSeconds, leftAxis: true, biasHigh: false);
         DrawSeries(ctx, plot, secondary, SecondaryBrush ?? Palette.BlueBrush, SecondaryUnit,
-            windowSeconds, leftAxis: false);
+            windowSeconds, leftAxis: false, biasHigh: true);
 
         DrawCrosshair(ctx, plot, primary, secondary, windowSeconds);
     }
 
     private void DrawSeries(DrawingContext ctx, Rect plot, IReadOnlyList<ChartSample>? samples,
-        IBrush brush, string unit, double windowSeconds, bool leftAxis)
+        IBrush brush, string unit, double windowSeconds, bool leftAxis, bool biasHigh)
     {
         if (samples is null || samples.Count == 0) return;
 
-        var (axisMin, step) = Axis(samples);
+        var (axisMin, step) = Axis(samples, biasHigh);
         var span = Ticks * step;
 
         // Tick labels down this series' side, in its color — the reader attaches numbers to a
@@ -236,10 +239,13 @@ public sealed class OverlayChartControl : Control
 
     /// <summary>
     /// Axis for one series: a nice step and a floor such that <see cref="Ticks"/> intervals of
-    /// that step cover the padded data range — so the shared gridline rows carry round numbers
-    /// on both sides even though the sides have unrelated scales.
+    /// that step cover the data — so the shared gridline rows carry round numbers on both sides
+    /// even though the sides have unrelated scales. The step is sized so the data spans only
+    /// about half the intervals, and <paramref name="biasHigh"/> decides which half: the spare
+    /// intervals go under a high-biased trace and over a low-biased one, which is how the two
+    /// overlaid traces get their own vertical territory.
     /// </summary>
-    private static (double Min, double Step) Axis(IReadOnlyList<ChartSample> samples)
+    private static (double Min, double Step) Axis(IReadOnlyList<ChartSample> samples, bool biasHigh)
     {
         var lo = double.MaxValue;
         var hi = double.MinValue;
@@ -250,9 +256,11 @@ public sealed class OverlayChartControl : Control
         }
         if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }   // a flat line still needs a scale
 
-        // step ≥ range/(Ticks−1) guarantees floor(lo) + Ticks·step ≥ hi.
-        var step = NiceCeil((hi - lo) / (Ticks - 1));
-        var min = Math.Floor(lo / step) * step;
+        // step ≥ range/2 ⇒ the data fits in ~2 of the 4 intervals; the anchor picks which two.
+        var step = NiceCeil((hi - lo) / 2.0);
+        var min = biasHigh
+            ? Math.Ceiling(hi / step) * step - Ticks * step   // data hugs the top rows
+            : Math.Floor(lo / step) * step;                   // data hugs the bottom rows
         while (min + Ticks * step < hi) step = NiceCeil(step * 1.01);   // belt for float edges
         return (min, step);
     }
