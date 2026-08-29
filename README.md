@@ -22,6 +22,21 @@ Part of the AB0R station-tools family alongside
 .NET 10 + Avalonia, self-contained single-file releases, self-install (`--install` /
 `--uninstall`), and an in-app updater.
 
+## Screenshots
+
+The main readout, live on the station's SmartShunt:
+
+![Main window — live V/A/W cards](docs/screenshots/main-window.png)
+
+The Chart window's combined view — two channels on color-matched axes, VictronConnect
+Trends-style, here catching an evening of FT8 transmit cycling:
+
+![Chart window, combined view](docs/screenshots/chart-combined.png)
+
+The same evening in the split view, one strip per channel:
+
+![Chart window, split view](docs/screenshots/chart-split.png)
+
 ## Features
 
 - Live V / A / W cards in a VictronConnect-inspired look, with min/max voltage, cumulative kWh,
