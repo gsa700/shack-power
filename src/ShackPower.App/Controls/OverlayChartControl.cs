@@ -89,11 +89,25 @@ public sealed class OverlayChartControl : Control
     private const double MarginLeft = 64, MarginRight = 64, MarginTop = 6, MarginBottom = 18;
 
     private Point? _cursor;
+    private Point? _dragLast;
+
+    /// <summary>Wheel zoom over the plot: (anchor fraction 0..1, scale factor).</summary>
+    public event Action<double, double>? ZoomRequested;
+
+    /// <summary>Drag pan, as a fraction of the current window (positive = later in time).</summary>
+    public event Action<double>? PanRequested;
 
     protected override void OnPointerMoved(Avalonia.Input.PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        _cursor = e.GetPosition(this);
+        var pos = e.GetPosition(this);
+        if (_dragLast is { } last)
+        {
+            var plotWidth = Math.Max(1, Bounds.Width - MarginLeft - MarginRight);
+            PanRequested?.Invoke(-(pos.X - last.X) / plotWidth);   // drag right = look earlier
+            _dragLast = pos;
+        }
+        _cursor = pos;
         InvalidateVisual();
     }
 
@@ -102,6 +116,30 @@ public sealed class OverlayChartControl : Control
         base.OnPointerExited(e);
         _cursor = null;
         InvalidateVisual();
+    }
+
+    protected override void OnPointerWheelChanged(Avalonia.Input.PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        var plotWidth = Math.Max(1, Bounds.Width - MarginLeft - MarginRight);
+        var anchor = Math.Clamp((e.GetPosition(this).X - MarginLeft) / plotWidth, 0, 1);
+        ZoomRequested?.Invoke(anchor, e.Delta.Y > 0 ? 1 / 1.3 : 1.3);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerPressed(Avalonia.Input.PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        _dragLast = e.GetPosition(this);
+        e.Pointer.Capture(this);
+    }
+
+    protected override void OnPointerReleased(Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        _dragLast = null;
+        e.Pointer.Capture(null);
     }
 
     public override void Render(DrawingContext ctx)
@@ -141,12 +179,13 @@ public sealed class OverlayChartControl : Control
         ctx.DrawLine(gridPen, new Point(plot.Center.X, plot.Y), new Point(plot.Center.X, plot.Bottom));
         ctx.DrawRectangle(gridPen, plot);
 
+        var timeFmt = windowSeconds < 600 ? "HH:mm:ss" : "HH:mm";
         for (var i = 0; i <= 2; i++)
         {
             var offset = windowSeconds * i / 2;
             var t = WindowStart.AddSeconds(offset);
             var x = plot.X + offset / windowSeconds * plot.Width;
-            DrawText(ctx, t.ToString("HH:mm", CultureInfo.CurrentCulture), label, 10,
+            DrawText(ctx, t.ToString(timeFmt, CultureInfo.CurrentCulture), label, 10,
                 new Point(Math.Clamp(x, plot.X + 14, plot.Right - 14), plot.Bottom + 3),
                 centered: true, centerYAtTop: true);
         }

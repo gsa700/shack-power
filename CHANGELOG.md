@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## v0.1.5-beta — 2026-08-28
+
+- Progressive zoom and pan on both chart views: mouse wheel zooms ~30% per notch, from the
+  full day down to a one-minute window (60 real points at 1 Hz). Live view stays pinned to
+  now and zooms its tail length; browsing a past day, zoom anchors at the cursor and drag
+  pans through the day. Presets remain as quick jumps; time labels gain seconds below ten
+  minutes
+
 ## v0.1.4-beta — 2026-08-28
 
 - Main window: the status line is gone — the connection dot is the whole story at a glance,

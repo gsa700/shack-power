@@ -125,7 +125,15 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SecondaryUnit));
     }
 
+    /// <summary>Wheel-zoom bounds: one minute (60 real samples at 1 Hz) up to a full day.</summary>
+    private const double MinWindowSeconds = 60;
+    private const double MaxWindowSeconds = 24 * 3600;
+
     private double _liveWindowSeconds = 3600;
+
+    // Browse-mode viewport within a past day, in seconds from that day's midnight.
+    private double _browseStartSeconds;
+    private double _browseSeconds = MaxWindowSeconds;
 
     private DateTime _windowStart;
     public DateTime WindowStart { get => _windowStart; private set => SetProperty(ref _windowStart, value); }
@@ -154,13 +162,57 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
 
     private void SetWindow(double seconds)
     {
-        _liveWindowSeconds = seconds;
+        if (IsToday)
+        {
+            _liveWindowSeconds = seconds;
+        }
+        else
+        {
+            // Keep the viewport's start where it was, clamped so the window stays inside the day.
+            _browseSeconds = Math.Clamp(seconds, MinWindowSeconds, MaxWindowSeconds);
+            _browseStartSeconds = Math.Clamp(_browseStartSeconds, 0, MaxWindowSeconds - _browseSeconds);
+        }
+        Recompute();
+    }
+
+    /// <summary>
+    /// Progressive wheel zoom from the chart controls. <paramref name="anchorFraction"/> is the
+    /// cursor's horizontal position in the plot (0..1): browsing a past day, the moment under
+    /// the cursor stays put while the window shrinks or grows around it. The live view is a
+    /// tail pinned to now, so the anchor is ignored and only the tail length changes.
+    /// </summary>
+    public void ZoomAt(double anchorFraction, double factor)
+    {
+        if (IsToday)
+        {
+            _liveWindowSeconds = Math.Clamp(_liveWindowSeconds * factor, MinWindowSeconds, MaxWindowSeconds);
+        }
+        else
+        {
+            var newSeconds = Math.Clamp(_browseSeconds * factor, MinWindowSeconds, MaxWindowSeconds);
+            var anchorTime = _browseStartSeconds + Math.Clamp(anchorFraction, 0, 1) * _browseSeconds;
+            _browseStartSeconds = Math.Clamp(anchorTime - Math.Clamp(anchorFraction, 0, 1) * newSeconds,
+                0, MaxWindowSeconds - newSeconds);
+            _browseSeconds = newSeconds;
+        }
+        Recompute();
+    }
+
+    /// <summary>Drag-pan, as a fraction of the current window. Browse mode only — the live
+    /// view stays pinned to now (flip to a past day to wander).</summary>
+    public void PanBy(double windowFraction)
+    {
+        if (IsToday) return;
+        _browseStartSeconds = Math.Clamp(_browseStartSeconds + windowFraction * _browseSeconds,
+            0, MaxWindowSeconds - _browseSeconds);
         Recompute();
     }
 
     private void LoadDay(DateOnly day)
     {
         _day = day;
+        _browseStartSeconds = 0;
+        _browseSeconds = MaxWindowSeconds;   // a fresh day opens at the full 24 h
         OnPropertyChanged(nameof(DayText));
         OnPropertyChanged(nameof(IsToday));
         NextDayCommand.RaiseCanExecuteChanged();
@@ -204,9 +256,9 @@ public sealed class ChartViewModel : ViewModelBase, IDisposable
         }
         else
         {
-            // A past day is always the whole day; the window presets apply to the live view.
-            seconds = 24 * 3600;
-            start = _day.ToDateTime(TimeOnly.MinValue);
+            // A past day opens at the full 24 h; wheel/drag then dives anywhere inside it.
+            seconds = _browseSeconds;
+            start = _day.ToDateTime(TimeOnly.MinValue).AddSeconds(_browseStartSeconds);
             entries = _dayFile;
         }
 

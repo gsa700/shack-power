@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ShackPower.App.ViewModels"
         xmlns:ctrl="using:ShackPower.App.Controls"
@@ -35,7 +35,7 @@
       <Grid RowDefinitions="Auto,*,Auto,*,Auto,*">
         <TextBlock Grid.Row="0" Text="VOLTS" FontSize="11" FontWeight="Bold"
                    Foreground="{StaticResource CardDimBrush}"/>
-        <ctrl:StripChartControl Grid.Row="1" Margin="0,2,0,8"
+        <ctrl:StripChartControl x:Name="VoltStrip" Grid.Row="1" Margin="0,2,0,8"
             Samples="{Binding VoltSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
             VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
@@ -45,7 +45,7 @@
 
         <TextBlock Grid.Row="2" Text="AMPS" FontSize="11" FontWeight="Bold"
                    Foreground="{StaticResource CardDimBrush}"/>
-        <ctrl:StripChartControl Grid.Row="3" Margin="0,2,0,8"
+        <ctrl:StripChartControl x:Name="AmpStrip" Grid.Row="3" Margin="0,2,0,8"
             Samples="{Binding AmpSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
             VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
@@ -55,7 +55,7 @@
 
         <TextBlock Grid.Row="4" Text="WATTS" FontSize="11" FontWeight="Bold"
                    Foreground="{StaticResource CardDimBrush}"/>
-        <ctrl:StripChartControl Grid.Row="5" Margin="0,2,0,0"
+        <ctrl:StripChartControl x:Name="WattStrip" Grid.Row="5" Margin="0,2,0,0"
             Samples="{Binding WattSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
             VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
@@ -81,7 +81,7 @@
                     BorderBrush="{Binding SecondaryBrush}" BorderThickness="2"
                     Foreground="{Binding SecondaryBrush}"/>
         </Grid>
-        <ctrl:OverlayChartControl Grid.Row="1"
+        <ctrl:OverlayChartControl x:Name="Overlay" Grid.Row="1"
             PrimarySamples="{Binding PrimarySamples}" SecondarySamples="{Binding SecondarySamples}"
             PrimaryBrush="{Binding PrimaryBrush}" SecondaryBrush="{Binding SecondaryBrush}"
             PrimaryUnit="{Binding PrimaryUnit}" SecondaryUnit="{Binding SecondaryUnit}"
