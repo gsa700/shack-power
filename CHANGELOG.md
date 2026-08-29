@@ -1,4 +1,11 @@
-# Changelog
+﻿# Changelog
+
+## v0.1.3-beta — 2026-08-28
+
+- The hover readout on both chart views now always shows all three channels (V / A / W, each
+  in its fixed color) at the cursor's moment, regardless of which channels are on display —
+  every channel is decimated on every refresh anyway, so the tooltip simply stopped hiding
+  what it already knew
 
 ## v0.1.2-beta — 2026-08-28
 

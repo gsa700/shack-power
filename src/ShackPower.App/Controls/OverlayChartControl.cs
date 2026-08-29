@@ -45,6 +45,17 @@ public sealed class OverlayChartControl : Control
     public static readonly StyledProperty<double> GapSecondsProperty =
         AvaloniaProperty.Register<OverlayChartControl, double>(nameof(GapSeconds), 15.0);
 
+    // Full three-channel sets for the hover readout — always all of V/A/W at the cursor, not
+    // just the two channels on display.
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> VoltSamplesProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(VoltSamples));
+
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> AmpSamplesProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(AmpSamples));
+
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> WattSamplesProperty =
+        AvaloniaProperty.Register<OverlayChartControl, IReadOnlyList<ChartSample>?>(nameof(WattSamples));
+
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
         AvaloniaProperty.Register<OverlayChartControl, IBrush?>(nameof(GridBrush));
 
@@ -68,6 +79,9 @@ public sealed class OverlayChartControl : Control
     public DateTime WindowStart { get => GetValue(WindowStartProperty); set => SetValue(WindowStartProperty, value); }
     public double WindowSeconds { get => GetValue(WindowSecondsProperty); set => SetValue(WindowSecondsProperty, value); }
     public double GapSeconds { get => GetValue(GapSecondsProperty); set => SetValue(GapSecondsProperty, value); }
+    public IReadOnlyList<ChartSample>? VoltSamples { get => GetValue(VoltSamplesProperty); set => SetValue(VoltSamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? AmpSamples { get => GetValue(AmpSamplesProperty); set => SetValue(AmpSamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? WattSamples { get => GetValue(WattSamplesProperty); set => SetValue(WattSamplesProperty, value); }
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
     public IBrush? LabelBrush { get => GetValue(LabelBrushProperty); set => SetValue(LabelBrushProperty, value); }
 
@@ -145,7 +159,7 @@ public sealed class OverlayChartControl : Control
         DrawSeries(ctx, plot, secondary, SecondaryBrush ?? Palette.BlueBrush, SecondaryUnit,
             windowSeconds, leftAxis: false, biasHigh: true);
 
-        DrawCrosshair(ctx, plot, primary, secondary, windowSeconds);
+        DrawCrosshair(ctx, plot, windowSeconds);
     }
 
     private void DrawSeries(DrawingContext ctx, Rect plot, IReadOnlyList<ChartSample>? samples,
@@ -207,32 +221,19 @@ public sealed class OverlayChartControl : Control
         }
     }
 
-    private void DrawCrosshair(DrawingContext ctx, Rect plot, IReadOnlyList<ChartSample>? primary,
-        IReadOnlyList<ChartSample>? secondary, double windowSeconds)
+    private void DrawCrosshair(DrawingContext ctx, Rect plot, double windowSeconds)
     {
         if (_cursor is not { } cursor || !plot.Contains(cursor)) return;
 
         var offset = (cursor.X - plot.X) / plot.Width * windowSeconds;
         var tolerance = Math.Max(GapSeconds, windowSeconds / plot.Width * 4);
-        var lines = new List<ChartCrosshair.Line>();
-        double? snappedOffset = null;
-
-        var sides = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Unit)[]
+        // Always all three channels, not just the two on display — the reader hovering "what
+        // happened at 18:30" wants the whole picture.
+        if (ChartCrosshair.AllChannels(VoltSamples, AmpSamples, WattSamples, offset, tolerance)
+            is { } hit)
         {
-            (primary, PrimaryBrush ?? Palette.OrangeDeepBrush, PrimaryUnit),
-            (secondary, SecondaryBrush ?? Palette.BlueBrush, SecondaryUnit),
-        };
-        foreach (var (samples, brush, unit) in sides)
-        {
-            if (ChartCrosshair.Nearest(samples, offset, tolerance) is not { } s) continue;
-            snappedOffset ??= s.OffsetSeconds;
-            var fmt = unit switch { "V" => "0.00", "A" => "0.00", _ => "0" };
-            lines.Add(new ChartCrosshair.Line(ChartCrosshair.Describe(s, fmt, unit), brush));
-        }
-        if (lines.Count > 0 && snappedOffset is { } snap)
-        {
-            var x = plot.X + snap / windowSeconds * plot.Width;
-            ChartCrosshair.Draw(ctx, plot, x, WindowStart.AddSeconds(snap), lines,
+            var x = plot.X + hit.Offset / windowSeconds * plot.Width;
+            ChartCrosshair.Draw(ctx, plot, x, WindowStart.AddSeconds(hit.Offset), hit.Lines,
                 GridBrush ?? Palette.CardDimBrush);
         }
     }

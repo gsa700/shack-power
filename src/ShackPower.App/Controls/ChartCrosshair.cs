@@ -45,6 +45,33 @@ internal static class ChartCrosshair
             : $"{mid.ToString(fmt, c)} {unit}";
     }
 
+    /// <summary>
+    /// The standard readout: all three channels at the cursor's moment, each in its fixed
+    /// color, whatever the view is displaying — the data is decimated for every channel on
+    /// every refresh anyway, so the tooltip always knows everything. Returns null when the
+    /// cursor is in a gap on every channel.
+    /// </summary>
+    public static (double Offset, IReadOnlyList<Line> Lines)? AllChannels(
+        IReadOnlyList<ChartSample>? volts, IReadOnlyList<ChartSample>? amps,
+        IReadOnlyList<ChartSample>? watts, double offsetSeconds, double tolerance)
+    {
+        var channels = new (IReadOnlyList<ChartSample>? Samples, IBrush Brush, string Fmt, string Unit)[]
+        {
+            (volts, Palette.BlueBrush, "0.00", "V"),
+            (amps, Palette.OrangeDeepBrush, "0.00", "A"),
+            (watts, Palette.GreenBrush, "0", "W"),
+        };
+        double? snap = null;
+        var lines = new List<Line>();
+        foreach (var (samples, brush, fmt, unit) in channels)
+        {
+            if (Nearest(samples, offsetSeconds, tolerance) is not { } s) continue;
+            snap ??= s.OffsetSeconds;
+            lines.Add(new Line(Describe(s, fmt, unit), brush));
+        }
+        return snap is { } o ? (o, lines) : null;
+    }
+
     /// <summary>Draw the vertical cursor line and the readout box beside it.</summary>
     public static void Draw(DrawingContext ctx, Rect plot, double cursorX, DateTime time,
         IReadOnlyList<Line> lines, IBrush gridBrush)

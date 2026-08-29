@@ -40,13 +40,16 @@ public sealed class StripChartControl : Control
     public static readonly StyledProperty<IBrush?> LabelBrushProperty =
         AvaloniaProperty.Register<StripChartControl, IBrush?>(nameof(LabelBrush));
 
-    /// <summary>Unit suffix for the hover readout ("V", "A", "W").</summary>
-    public static readonly StyledProperty<string> UnitProperty =
-        AvaloniaProperty.Register<StripChartControl, string>(nameof(Unit), "");
+    // The full three-channel sets feed the hover readout, which always shows V/A/W at the
+    // cursor regardless of which channel this strip draws — the data exists either way.
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> VoltSamplesProperty =
+        AvaloniaProperty.Register<StripChartControl, IReadOnlyList<ChartSample>?>(nameof(VoltSamples));
 
-    /// <summary>Number format for the hover readout.</summary>
-    public static readonly StyledProperty<string> ValueFormatProperty =
-        AvaloniaProperty.Register<StripChartControl, string>(nameof(ValueFormat), "0.0");
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> AmpSamplesProperty =
+        AvaloniaProperty.Register<StripChartControl, IReadOnlyList<ChartSample>?>(nameof(AmpSamples));
+
+    public static readonly StyledProperty<IReadOnlyList<ChartSample>?> WattSamplesProperty =
+        AvaloniaProperty.Register<StripChartControl, IReadOnlyList<ChartSample>?>(nameof(WattSamples));
 
     static StripChartControl()
     {
@@ -62,8 +65,9 @@ public sealed class StripChartControl : Control
     public IBrush? EnvelopeBrush { get => GetValue(EnvelopeBrushProperty); set => SetValue(EnvelopeBrushProperty, value); }
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
     public IBrush? LabelBrush { get => GetValue(LabelBrushProperty); set => SetValue(LabelBrushProperty, value); }
-    public string Unit { get => GetValue(UnitProperty); set => SetValue(UnitProperty, value); }
-    public string ValueFormat { get => GetValue(ValueFormatProperty); set => SetValue(ValueFormatProperty, value); }
+    public IReadOnlyList<ChartSample>? VoltSamples { get => GetValue(VoltSamplesProperty); set => SetValue(VoltSamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? AmpSamples { get => GetValue(AmpSamplesProperty); set => SetValue(AmpSamplesProperty, value); }
+    public IReadOnlyList<ChartSample>? WattSamples { get => GetValue(WattSamplesProperty); set => SetValue(WattSamplesProperty, value); }
 
     private const double MarginLeft = 4, MarginRight = 52, MarginTop = 4, MarginBottom = 18;
 
@@ -186,16 +190,17 @@ public sealed class StripChartControl : Control
             ctx.DrawGeometry(null, linePen, geometry);
         }
 
-        // Hover crosshair + readout, when the cursor is over the plot and near data.
+        // Hover crosshair + readout: always all three channels at the cursor's moment, even
+        // though this strip draws only one of them.
         if (_cursor is { } cursor && plot.Contains(cursor))
         {
             var offset = (cursor.X - plot.X) / plot.Width * windowSeconds;
-            if (ChartCrosshair.Nearest(samples, offset, Math.Max(GapSeconds, windowSeconds / plot.Width * 4)) is { } s)
+            var tolerance = Math.Max(GapSeconds, windowSeconds / plot.Width * 4);
+            if (ChartCrosshair.AllChannels(VoltSamples, AmpSamples, WattSamples, offset, tolerance)
+                is { } hit)
             {
-                ChartCrosshair.Draw(ctx, plot, Map(s.OffsetSeconds, hi).X,
-                    WindowStart.AddSeconds(s.OffsetSeconds),
-                    [new ChartCrosshair.Line(ChartCrosshair.Describe(s, ValueFormat, Unit), line)],
-                    grid);
+                var x = plot.X + hit.Offset / windowSeconds * plot.Width;
+                ChartCrosshair.Draw(ctx, plot, x, WindowStart.AddSeconds(hit.Offset), hit.Lines, grid);
             }
         }
     }

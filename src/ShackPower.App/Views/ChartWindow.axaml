@@ -38,7 +38,8 @@
         <ctrl:StripChartControl Grid.Row="1" Margin="0,2,0,8"
             Samples="{Binding VoltSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
-            Unit="V" ValueFormat="0.00"
+            VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
+            WattSamples="{Binding WattSamples}"
             LineBrush="{StaticResource BlueBrush}" EnvelopeBrush="#66387DC5"
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
 
@@ -47,7 +48,8 @@
         <ctrl:StripChartControl Grid.Row="3" Margin="0,2,0,8"
             Samples="{Binding AmpSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
-            Unit="A" ValueFormat="0.00"
+            VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
+            WattSamples="{Binding WattSamples}"
             LineBrush="{StaticResource OrangeDeepBrush}" EnvelopeBrush="#66E87722"
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
 
@@ -56,7 +58,8 @@
         <ctrl:StripChartControl Grid.Row="5" Margin="0,2,0,0"
             Samples="{Binding WattSamples}" WindowStart="{Binding WindowStart}"
             WindowSeconds="{Binding WindowSeconds}" GapSeconds="{Binding GapSeconds}"
-            Unit="W" ValueFormat="0"
+            VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
+            WattSamples="{Binding WattSamples}"
             LineBrush="{StaticResource GreenBrush}" EnvelopeBrush="#662E9E44"
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
       </Grid>
@@ -82,6 +85,8 @@
             PrimarySamples="{Binding PrimarySamples}" SecondarySamples="{Binding SecondarySamples}"
             PrimaryBrush="{Binding PrimaryBrush}" SecondaryBrush="{Binding SecondaryBrush}"
             PrimaryUnit="{Binding PrimaryUnit}" SecondaryUnit="{Binding SecondaryUnit}"
+            VoltSamples="{Binding VoltSamples}" AmpSamples="{Binding AmpSamples}"
+            WattSamples="{Binding WattSamples}"
             WindowStart="{Binding WindowStart}" WindowSeconds="{Binding WindowSeconds}"
             GapSeconds="{Binding GapSeconds}"
             GridBrush="#E4EAF0" LabelBrush="{StaticResource CardDimBrush}"/>
