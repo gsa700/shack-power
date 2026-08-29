@@ -29,7 +29,7 @@ The main readout, live on the station's SmartShunt:
 ![Main window — live V/A/W cards](docs/screenshots/main-window.png)
 
 The Chart window's combined view — two channels on color-matched axes, VictronConnect
-Trends-style, here catching an evening of FT8 transmit cycling:
+Trends-style, here catching an evening QSO with OM Mike on 147.555 @ 50 watts output, transmit cycling:
 
 ![Chart window, combined view](docs/screenshots/chart-combined.png)
 
