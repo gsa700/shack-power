@@ -49,12 +49,47 @@ nothing drops. The charger carries the steady load and recharge; the battery buf
   Why an MPPT over a one-box AC charger: **it has VE.Direct**, so the app sees charge state
   (bulk/absorption/float), input power and errors directly — and real panels can land on the
   PV input someday with zero re-architecture.
-- **Battery:** Bioenno 40 Ah LiFePO4 now (~6+ h at the bench's ~6 A draw); larger bank planned
-  for extended no-charge runtime.
+- **Battery:** Bioenno 40 Ah LiFePO4 now (~6+ h at the bench's ~6 A draw); **Epoch 12 V 105 Ah
+  Essential (heated, Bluetooth) ordered 2026-09-04** to replace it — 105 A / 100 A BMS,
+  14.2–14.4 V absorption, float preferably off (the MPPT's floor is ~13.4 V). Sized from a
+  week of logs: ~1.3 A standby, ~5 A operating → ~17 h operating / 2.5–3 days idle at 85 % DOD.
+  When it lands, raise the MPPT charge cap from the Bioenno's value to 30 A.
 - **RF-silent operating mode:** charger chain OFF while on the air — pure battery is the
   quietest possible source, zero switching hash by construction. Charger on between sessions.
   This is the intended routine, not a workaround. (The chain is two switchers — brick + MPPT —
   which is exactly why the off-while-operating routine, and one smart plug kills both.)
+
+### Bench log
+
+- **2026-09-07 — first wiring attempt.** MPPT `PID 0xA056`, FW 1.74, cable serial `VEB32G93A`
+  (COM14 on HAMBENCH). Configured battery-first over Bluetooth per Victron's instructions.
+  - **LRS-600-48 arrived with a marginal 115/230 selector** — dark on first power-up (shipped at
+    230, set to 115, still dark) until the switch was worked vigorously. If it ever goes dark
+    under load again, contact cleaner into that switch; it carries the full mains current in
+    the 115 position.
+  - **LRS trips instantly when the MPPT is connected** — spark at the Anderson, DC-OK LED out,
+    recovers the moment the MPPT is unplugged. Same result whether the MPPT is hot-plugged or
+    already connected at switch-on. A 90 s VE.Direct capture during a hot-plug showed `VPV`
+    never exceeding 0.04 V, i.e. the supply collapsed before the MPPT saw a single 1 Hz frame;
+    `ERR 0`, `OR 0x1` (no input power). Diagnosis: the MPPT's PV-input capacitor bank looks
+    like a short for a few ms and the LRS's **hiccup-mode overload protection** latches on it —
+    a known LRS-series weakness with capacitive loads. No MPPT setting can affect this.
+    **Fix ordered: Ametherm SL32 5R020 NTC inrush limiter** (5 Ω cold → ~10 A peak, 20 A
+    steady) in series with PV+ at the MPPT-side Anderson, in free air; let it cool ~1 min
+    before re-plugging. Fallback if the NTC isn't enough: exchange the LRS for a Mean Well
+    HRP-600-48 (constant-current limiting, not hiccup) inside the Amazon return window
+    (~2026-09-27). Cutting losses (SS-50 + battery in parallel, PWRgate-style) was rejected: it
+    forfeits controlled charge current, the 14.2 V balance top-off, and the charger telemetry
+    the multi-device app work depends on.
+  - **Shunt wiring lesson:** the shunt measures only current crossing BATTERY MINUS → SYSTEM
+    MINUS. Charger negative must land on the *system* side (bus bar) or charge current is
+    invisible; with no battery, the supply's negative takes the BATTERY MINUS post or the
+    shunt reads exactly 0.000 A. Shunt was in battery-monitor mode during the battery run
+    (SOC/TTG showed in the app) and returned to DC-monitor mode on the supply.
+  - **The Astron RS-35M linear died** (loud transformer/cap noise, RF hash) — third supply lost
+    this year after two Samlex switchers; suspect mains quality or heat, check the homelab
+    UPS's input-voltage log. Interim: Astron SS-50 switcher on the bus at 14.26 V → trim to
+    13.8 V before any LiFePO4 sits on it. Wiring done in 10 AWG with PP45 contacts throughout.
 
 ### Alternatives considered and why not
 

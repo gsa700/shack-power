@@ -89,8 +89,14 @@ the App project is only the Avalonia shell.
 
 ## Cable identity
 
-The VE.Direct USB cable is an FTDI FT-X (`PID_6015`), chip serial **`VEAUI3T2A`** — pin by that,
-never by COM number (all COM numbers on this box changed across a Windows reinstall once).
+Each VE.Direct USB cable is an FTDI FT-X (`PID_6015`); pin by chip serial, never by COM number
+(all COM numbers on this box changed across a Windows reinstall once):
+
+| Serial | Device | Note |
+|---|---|---|
+| **`VEAUI3T2A`** | SmartShunt 300A | battery leg, battery-monitor mode since 2026-09-07 |
+| **`VEB32G93A`** | SmartSolar MPPT 100/30 | first seen 2026-09-07 as COM14; fed by the LRS-600-48 |
+
 The station's other FTDI adapters, from W2 Monitor's table: `A10KMB4VA` W2 #1, `AG0JFX7UA` W2 #2,
 `ABSCDI99A` LP-100A, `AD0JLU2FA` TM-V71A. **Never probe unknown adapters to identify them — two
 of those are transmitters.** VE.Direct needs no probe anyway: the protocol is receive-only.
