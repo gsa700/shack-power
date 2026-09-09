@@ -1,5 +1,25 @@
 ﻿# Changelog
 
+## Unreleased — Cerbo GX (Modbus TCP) source, built 2026-09-09 ahead of the hardware
+
+- New reading source: a **Cerbo GX over Modbus TCP** (`ShackPower.Core/Cerbo`). The hub owns the
+  SmartShunt, the MultiPlus and (Phase 2) the MPPT; the app polls their services at 1 Hz and
+  reconnects like the serial path. Register map copied from Victron's `attributes.csv`; narrow
+  reads so an unpublished register (no temperature sensor, no TTG while charging) nulls one
+  field instead of failing the reading
+- Setup → Connection: **Source** radio (VE.Direct cable / Cerbo GX), Cerbo address, unit IDs,
+  and **Find devices**, which probes the hub for the battery-monitor, inverter/charger and solar
+  services and fills the boxes (unit IDs are dynamic on Venus ≥ 2.60). `--cerbo <host[:port]>`
+  on the command line does the same for a run
+- Main window: **CHARGER** row (MultiPlus state · on mains / MAINS LOST · DC amps · QUIET when
+  DVCC has charging inhibited) and **SOLAR** row (MPPT state · PV watts · kWh today), shown only
+  when the hub reports those services
+- `ChargeInhibit` (Core): DVCC charge-current-limit write/re-assert/restore for the quiet-mode
+  routine — tested, **not yet exposed in the UI** pending a GX-side watchdog (docs/cerbo-modbus.md)
+- Tests: decoder scaling, discovery, inhibit semantics, and an end-to-end run against a real
+  FluentModbus loopback server (254 passing). Docs rewritten for the 2026-09-08 system redesign
+  (MultiPlus 12/1200 + Cerbo GX MKII + Epoch 105 Ah; LRS/MPPT-as-charger plan retired to history)
+
 ## v0.1.8-beta — 2026-08-28
 
 - Zoom buttons settled: slightly translucent round pair, horizontal, centered between the

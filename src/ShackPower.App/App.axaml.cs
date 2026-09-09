@@ -45,7 +45,21 @@ public partial class App : Application
                 .Any(a => a.Equals("--setup", StringComparison.OrdinalIgnoreCase));
             var openChart = Environment.GetCommandLineArgs()
                 .Any(a => a.Equals("--chart", StringComparison.OrdinalIgnoreCase));
-            _meter = new MeterService(simulated);
+
+            // `--cerbo <host[:port]>` switches this run (and the saved choice) to the Cerbo GX
+            // source — the quick way to point a fresh install at the hub without opening Setup.
+            var cliArgs = Environment.GetCommandLineArgs();
+            var cerboIdx = Array.FindIndex(cliArgs, a => a.Equals("--cerbo", StringComparison.OrdinalIgnoreCase));
+            if (cerboIdx >= 0 && cerboIdx + 1 < cliArgs.Length && !cliArgs[cerboIdx + 1].StartsWith("--"))
+            {
+                _config.Source = "Cerbo";
+                _config.CerboHost = cliArgs[cerboIdx + 1];
+            }
+
+            var useCerbo = !simulated && _config.UseCerbo;
+            _meter = simulated ? new MeterService(simulated: true)
+                   : useCerbo ? new MeterService(_config.ToCerboSettings())
+                   : new MeterService();
             // A --sim run NEVER writes the real log: synthetic rows interleaved into genuine
             // operating history are pollution nothing downstream can reliably separate out
             // (learned the hard way on cutover day — dev sim sessions salted the live CSV).
@@ -63,6 +77,11 @@ public partial class App : Application
             {
                 CheckUpdatesAtStartup = _config.CheckUpdatesAtStartup,
                 SelectedTabIndex = _config.SetupTab,   // clamped in the setter
+                UseCerbo = _config.UseCerbo,
+                CerboHost = _config.CerboHost ?? "",
+                CerboBatteryUnit = _config.CerboBatteryUnit?.ToString() ?? "",
+                CerboVeBusUnit = _config.CerboVeBusUnit?.ToString() ?? "",
+                CerboSolarUnit = _config.CerboSolarUnit?.ToString() ?? "",
             };
 
             // A hand-installed copy is adopted where it stands; never block startup over this.
@@ -72,7 +91,18 @@ public partial class App : Application
             {
                 _meter.Connect("SIM");
             }
-            else if (!Program.PendingUninstall)   // don't take the port for a run that only uninstalls
+            else if (Program.PendingUninstall)
+            {
+                // don't take the port / open a socket for a run that only uninstalls
+            }
+            else if (useCerbo)
+            {
+                // The GX owns the cables; we just need an address and the shunt's unit ID. Without
+                // a unit ID there is nothing to poll yet — Setup's "Find devices" fills it in.
+                if (!string.IsNullOrWhiteSpace(_config.CerboHost) && _config.CerboBatteryUnit is not null)
+                    _meter.Connect(_config.CerboHost.Trim());
+            }
+            else
             {
                 // Follow the cable by its chip serial across COM renumbering, then auto-connect.
                 var startupPort = PortIdentity.ResolvePort(_config.Port, _config.Serial);
@@ -417,8 +447,9 @@ public partial class App : Application
                 _config.ChartH = _chartWindow.Height;
                 if (_chartVm is not null) CaptureChartPrefs(_chartVm);
             }
-            // Don't let a --sim run overwrite the real connection identity.
-            if (!_meter.IsSimulated)
+            // Don't let a --sim run overwrite the real connection identity, and don't let a Cerbo
+            // run write its host text into the serial port slot.
+            if (_meter.Kind == MeterSourceKind.Serial)
             {
                 var port = _meter.CurrentPort ?? _setupVm.SelectedPort;
                 if (port is not null)
@@ -426,6 +457,14 @@ public partial class App : Application
                     _config.Port = port;
                     if (PortIdentity.SerialFor(port) is { } serial) _config.Serial = serial;
                 }
+            }
+            if (!_meter.IsSimulated)
+            {
+                _config.Source = _setupVm.UseCerbo ? "Cerbo" : "Serial";
+                _config.CerboHost = string.IsNullOrWhiteSpace(_setupVm.CerboHost) ? null : _setupVm.CerboHost.Trim();
+                _config.CerboBatteryUnit = SetupViewModel.ParseUnit(_setupVm.CerboBatteryUnit);
+                _config.CerboVeBusUnit = SetupViewModel.ParseUnit(_setupVm.CerboVeBusUnit);
+                _config.CerboSolarUnit = SetupViewModel.ParseUnit(_setupVm.CerboSolarUnit);
             }
             _config.SetupTab = _setupVm.SelectedTabIndex;
             _config.CheckUpdatesAtStartup = _setupVm.CheckUpdatesAtStartup;

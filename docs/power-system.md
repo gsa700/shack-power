@@ -1,131 +1,155 @@
 # The shack power system this app is designed around
 
-Decided 2026-08-28, David + Claude, after walking the alternatives. This is the reference
-architecture Shack Power's roadmap assumes; the reasoning is recorded so a later session (or a
-later David) doesn't re-litigate it cold.
+First decided 2026-08-28 (David + Claude), **substantially redesigned 2026-09-08** in a Techbench
+session and ported into this repo 2026-09-09. The reasoning is recorded so a later session (or a
+later David) doesn't re-litigate it cold. The app-side protocol details for the current design
+live in `cerbo-modbus.md`; the 2026-08-28 design is kept below as history because its bench log
+explains hardware that is still in the shack.
 
 ## Scope statement
 
-**Shack Power monitors; VictronConnect configures.** This app is real-time monitoring of a ham
-shack's DC power system — not a Victron ecosystem tool that happens to run in a shack, and never
-a device configurator. Configure shunts and chargers with VictronConnect on a phone over
-Bluetooth (which coexists fine with this app's serial connection — verified live 2026-08-28).
+**Shack Power monitors; VictronConnect (phone, Bluetooth) and the Cerbo's remote console
+configure.** This app is real-time monitoring plus shack-specific automation of a ham shack's
+power system — not a Victron ecosystem tool that happens to run in a shack, never a device
+configurator, and not a VictronConnect or VRM replacement.
 
-- **Baseline (v1, running today):** one SmartShunt 300A in DC energy-meter mode (`MON 1`) on a
-  VE.Direct USB cable, watching the station's 13.8 V bus. For most hams this is the whole story.
-- **Growth path:** battery backup arrives → a shunt in battery-monitor mode on the battery, and
-  the app grows to N VE.Direct devices distinguished by **role** (Load / Battery / Supply /
-  Charger), pinned by cable chip serial. Roles carry the meaning; no blind summation.
-- **Deliberately out:** device configuration, Bluetooth, AC-side/inverter monitoring, the wider
-  Victron ecosystem (MPPT/Cerbo dashboards) unless a real need shows up.
+- **Data path (since 2026-09-08):** a **Cerbo GX MKII** owns the Victron devices; the app is a
+  Modbus TCP client of it (see `cerbo-modbus.md`). The original VE.Direct-USB-cable path stays
+  as the no-hub / Linux-testbed / `--sim` mode.
+- **Deliberately out:** device configuration, Bluetooth, the wider Victron dashboard (VRM does
+  that), and general Modbus tooling.
 
-## Recommended backup topology: DC-coupled, combiner-free (decided 2026-08-28)
+## Phase 1 topology (building 2026-09-10 — MultiPlus + Cerbo arriving)
 
 ```
-mains AC ──[smart plug*]──> Mean Well LRS-600-48 ──> SmartSolar MPPT 100/30 ──> LiFePO4 ──> loads
-                            (48 V, 600 W, fanless)        │ VE.Direct              │
-                                                          └──> the app          SmartShunt
-                                                                        (battery-monitor mode)
+mains AC ──> MultiPlus 12/1200/50-16 ──AC out──> rack power conditioner (PC, one LG 4K, dbx, MOTU, RT-21D…)
+                 │ charger / inverter / ATS           (backup circuit; other 4K + subwoofer stay on house AC)
+                 │ 4 AWG, 100 A MRBF
+        Blue Sea 2151 dual MRBF block on the battery + post
+                 │ 8 AWG, 40 A MRBF
+     Epoch 105 Ah LiFePO4 ──> SmartShunt (battery leg, battery-monitor mode) ──> station DC bus (~30 A max)
+
+     Cerbo GX MKII ── VE.Direct ── SmartShunt        Cerbo ── Ethernet ── LAN ── Shack Power (Modbus TCP),
+                  ── VE.Bus (blue cable) ── MultiPlus                             Grafana, VRM
 ```
-\* smart plug is the future charger-control hook — see BACKLOG.
 
-Loads live on the battery bus permanently, so a mains failure is a non-event: nothing switches,
-nothing drops. The charger carries the steady load and recharge; the battery buffers TX peaks.
+- **Charger + PC backup in one box: Victron MultiPlus 12/1200/50-16** (1200 VA, 50 A charger,
+  16 A transfer switch, VE.Bus). Normally passes mains through and charges; on an outage it
+  inverts for the conditioner's loads (~650 W worst case, ~1100 W if the rotator turns). Chosen
+  over a plain Phoenix inverter because backup-only + stays-on-mains needs an ATS; MultiPlus II
+  rejected (ESS/grid features irrelevant, smallest 12 V one is 3 kVA class).
+- **Battery: Epoch 12 V 105 Ah Essential** (heated, Bluetooth; 105 A / 100 A BMS, 14.2–14.4 V
+  absorption). Sized from a week of shunt logs (~1.3 A standby ≈ 40 Ah/day, ~5–6 A operating):
+  ~17 h operating or ~1.6 days total autonomy if mains *and* charger were both gone. Shares the
+  bank between the station and the PC backup — the minimum-reserve SOC for backup duty is an
+  open decision.
+- **Protection:** MRBF at the battery post (Blue Sea 2151: 100 A MultiPlus leg, 40 A bus leg),
+  MRCB where a resettable breaker is wanted — **not Class T** (David's marine standard, matches
+  the boat). Size to protect the cable, not the load: the MultiPlus draws ~101 A at nameplate,
+  right at the Epoch's 105 A BMS ceiling, so 4 AWG + 100 A is a "size to real load (~46 A)"
+  call, 2 AWG on the next wire order.
+- **Hub: Cerbo GX MKII.** Shunt on VE.Direct, MultiPlus on VE.Bus, Ethernet to the LAN. Chosen
+  over an MK3-USB because David wants VRM/remote console *and* Grafana, and the Cerbo is a
+  strict superset. **VE.Bus is RJ45 but is not Ethernet — never into a switch**; the blue
+  Victron cable is the visual guard.
+- **Charge profile:** 14.2 V absorption / 13.5 V float (Victron's LiFePO4 numbers), short
+  absorption time; temperature compensation off. The shunt's aux input carries the ordered
+  temperature sensor (low-temp cutoff second opinion; relative-to-ambient drift is the app's
+  early-warning opportunity).
+- **RF-quiet operating:** inhibit the *charger* while on the air, via DVCC's charge-current
+  limit through the Cerbo — never by cutting the MultiPlus's AC input (that fails it over to
+  inverting and drains the bank into the PC). Fail-safe watchdog still to be built; details and
+  the open questions are in `cerbo-modbus.md`.
+- **Grounding:** the MultiPlus's chassis/PE lug bonds to the station's single-point ground bus
+  (which is tied to the house service ground via the entry panel and rod), decided 2026-09-08.
 
-- **Charger: Victron SmartSolar MPPT 100/30, fed by a Mean Well LRS-600-48 on the PV input**
-  (decided 2026-08-28, superseding the 24 V/350 W first cut). The MPPT doesn't care that the
-  "panel" is a power brick — but it does need the input ~5 V above *battery* voltage to start
-  (a 13.8 V shack PSU can never drive it), and 100 V is the PV-input *maximum*, not a
-  requirement. Why 48 V over 24 V: it keeps a future **24 V battery bank** possible (a 24 V
-  bank absorbing at ~28.8 V needs 34 V+ input, which kills a 24 V feed), and halves the input
-  current; the slightly larger buck ratio costs a negligible point of efficiency. Why 600 W:
-  the MPPT's full 30 A at 14.4 V absorption is ~455 W of input, and ~30% headroom keeps the
-  tracker from ever dragging the supply into current-limit foldback — the one failure mode of
-  the PSU-as-panel arrangement. The LRS-600 is free-air convection like the LRS-350: **no fan,
-  silent** — give the case some convection room and don't entomb it at full load. Do NOT
-  parallel non-current-sharing supplies to get power; one bigger unit (or a series stack of
-  identical ones) is the correct shape. Charge current capped in VictronConnect at the
-  battery's rating (the 40 Ah Bioenno wants ≤20 A; the full 30 A waits for the bigger bank).
-  Why an MPPT over a one-box AC charger: **it has VE.Direct**, so the app sees charge state
-  (bulk/absorption/float), input power and errors directly — and real panels can land on the
-  PV input someday with zero re-architecture.
-- **Battery:** Bioenno 40 Ah LiFePO4 now (~6+ h at the bench's ~6 A draw); **Epoch 12 V 105 Ah
-  Essential (heated, Bluetooth) ordered 2026-09-04** to replace it — 105 A / 100 A BMS,
-  14.2–14.4 V absorption, float preferably off (the MPPT's floor is ~13.4 V). Sized from a
-  week of logs: ~1.3 A standby, ~5 A operating → ~17 h operating / 2.5–3 days idle at 85 % DOD.
-  When it lands, raise the MPPT charge cap from the Bioenno's value to 30 A.
-- **RF-silent operating mode:** charger chain OFF while on the air — pure battery is the
-  quietest possible source, zero switching hash by construction. Charger on between sessions.
-  This is the intended routine, not a workaround. (The chain is two switchers — brick + MPPT —
-  which is exactly why the off-while-operating routine, and one smart plug kills both.)
+## Phase 2 (when a 450 W panel is bought)
 
-### Bench log
+Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
+becomes a second, weather-dependent charge source; the same DVCC limit inhibits it. **Never two
+450 W panels in series** — cold-morning Voc (~58 V each) puts ~115 V into a 100 V controller.
+One panel, or two in parallel. The MPPT needs its own protection point (the 2151 is dual-circuit).
+MPPT firmware ≥ 1.39. Enable VE.Smart networking between shunt and MPPT.
 
-- **2026-09-07 — first wiring attempt.** MPPT `PID 0xA056`, FW 1.74, cable serial `VEB32G93A`
-  (COM14 on HAMBENCH). Configured battery-first over Bluetooth per Victron's instructions.
-  - **LRS-600-48 arrived with a marginal 115/230 selector** — dark on first power-up (shipped at
-    230, set to 115, still dark) until the switch was worked vigorously. If it ever goes dark
-    under load again, contact cleaner into that switch; it carries the full mains current in
-    the 115 position.
-  - **LRS trips instantly when the MPPT is connected** — spark at the Anderson, DC-OK LED out,
-    recovers the moment the MPPT is unplugged. Same result whether the MPPT is hot-plugged or
-    already connected at switch-on. A 90 s VE.Direct capture during a hot-plug showed `VPV`
-    never exceeding 0.04 V, i.e. the supply collapsed before the MPPT saw a single 1 Hz frame;
-    `ERR 0`, `OR 0x1` (no input power). Diagnosis: the MPPT's PV-input capacitor bank looks
-    like a short for a few ms and the LRS's **hiccup-mode overload protection** latches on it —
-    a known LRS-series weakness with capacitive loads. No MPPT setting can affect this.
-    **Fix ordered: Ametherm SL32 5R020 NTC inrush limiter** (5 Ω cold → ~10 A peak, 20 A
-    steady) in series with PV+ at the MPPT-side Anderson, in free air; let it cool ~1 min
-    before re-plugging. Fallback if the NTC isn't enough: exchange the LRS for a Mean Well
-    HRP-600-48 (constant-current limiting, not hiccup) inside the Amazon return window
-    (~2026-09-27). Cutting losses (SS-50 + battery in parallel, PWRgate-style) was rejected: it
-    forfeits controlled charge current, the 14.2 V balance top-off, and the charger telemetry
-    the multi-device app work depends on.
-  - **Shunt wiring lesson:** the shunt measures only current crossing BATTERY MINUS → SYSTEM
-    MINUS. Charger negative must land on the *system* side (bus bar) or charge current is
-    invisible; with no battery, the supply's negative takes the BATTERY MINUS post or the
-    shunt reads exactly 0.000 A. Shunt was in battery-monitor mode during the battery run
-    (SOC/TTG showed in the app) and returned to DC-monitor mode on the supply.
-  - **The Astron RS-35M linear died** (loud transformer/cap noise, RF hash) — third supply lost
-    this year after two Samlex switchers; suspect mains quality or heat, check the homelab
-    UPS's input-voltage log. Interim: Astron SS-50 switcher on the bus at 14.26 V → trim to
-    13.8 V before any LiFePO4 sits on it. Wiring done in 10 AWG with PP45 contacts throughout.
+## Load numbers (measured)
 
-### Alternatives considered and why not
+- Station powered up: **~6 A @ 13.9 V ≈ 83 W**. Standby (most gear off): **23 W ≈ 1.65 A**,
+  24/7, the dominant daily cost (~40 Ah/day). AllStar node is on homelab PoE, not this budget.
+- Working figure ~800 Wh/day station-only; PC backup draw is outage-only.
 
-- **West Mountain PWRgate / FET combiner** — RF-silent and simple, but a dumb device: no charge
-  profiles, no current limiting, no visibility, expensive for what it is. Rejected on
-  flexibility.
-- **Blue Smart IP67 12/25** — was the near-pick: potted, fanless, one sealed box, charge
-  current configurable. Lost to the MPPT when the MPPT + 24 V brick priced at-or-under it
-  *with* VE.Direct telemetry and a future solar path. Still the right answer for someone who
-  wants one silent box and doesn't care about charger visibility.
-- **Orion XS DC-DC (keeps the 13.8 V PSU) and Phoenix Smart IP43 (AC-in, has VE.Direct)** —
-  both technically fine (the IP43 is the only small-ish *AC* charger with a VE.Direct port),
-  both judged overkill for the shack; David runs both on the boat.
-- **Inverter/charger (MultiPlus-style)** — answers a different question (keeping AC alive for
-  computers). RF-suspect, conversion losses, and the radio wanted DC all along. A small
-  ordinary UPS for the PC is out of this app's scope.
+## LiFePO4 care and the SOC-drift problem
 
-### Battery care notes (LiFePO4)
+Shallower DOD nominally buys cycles, but at this duty the pack dies of calendar aging first —
+and LiFePO4 calendar-ages fastest **parked at 100 %**. Charger-off-while-operating is therefore
+near-optimal by accident. What ages cells is time *at absorption voltage*, so tune absorption
+time, not float.
 
-Shallower DOD nominally buys more cycles, but at this duty the pack dies of calendar aging
-first — and LiFePO4 calendar-ages fastest **parked at 100% SOC** (the opposite of lead-acid
-instincts). The charger-off-while-operating routine is therefore accidentally near-optimal:
-the battery works through the healthy mid-SOC range and only returns to full when charging
-resumes. Refinement available: hold 85–90% day-to-day and top to 100% only when full reserve
-is wanted — which the smart-plug + SOC-window idea in BACKLOG.md would automate.
+The shunt is a coulomb counter with no voltage reference across 30–80 % SOC; it **only resyncs on
+a genuine full charge** (charged-voltage + tail-current). Drift compounds silently, so any
+SOC-triggered automation needs a scheduled forced full charge — easy in Phase 1 (the MultiPlus
+charges on demand), scheduled for times the station isn't in use because inhibit and sync-charge
+can't overlap. Sync on the *shunt's* synchronised/100 % flag, never on the charger's float state.
 
 ## What this means for the app
 
-- **Roles, not arithmetic.** Each VE.Direct device gets a configured role; a battery-monitor
-  shunt (`MON 0`) is presumptively Battery, a DC-meter shunt Load/Supply. Derived indicators
-  come from role semantics.
-- **Battery discharge is not an alarm** — in this shack it's the normal operating mode.
-  Alerting (when built) keys on **SOC thresholds**, never on "discharging", and then behaves
-  identically whether the charger is off by choice or mains actually failed.
-- **Mains state is explicit, not inferred.** With the SmartSolar on VE.Direct, the charger's
-  own state field says float/bulk/off — no battery-current guesswork needed.
-- **Charger control stays out of the VE.Direct/BLE path.** If the app ever controls charging,
-  it reads the shunt it trusts and flips a local-API smart plug — never a reverse-engineered
-  Bluetooth write protocol.
+- **Roles, not arithmetic.** Each device has a role from what it is on the hub (battery service
+  = Battery, vebus = Charger/Inverter, solarcharger = Solar). Load = charger current − net
+  battery current; no blind summation.
+- **Battery discharge is not an alarm** — in this shack it's the normal operating mode. Alerting
+  (when built) keys on **SOC thresholds** and link loss, and behaves the same whether the charger
+  is off by choice or mains actually failed.
+- **Mains state is explicit, not inferred**: the vebus `/State` register says Inverting, and
+  `/Ac/ActiveIn/ActiveInput` = 240 says disconnected.
+- **Charger control goes through the hub's documented Modbus register**, with a GX-side
+  watchdog, never through reverse-engineered Bluetooth writes and never through the AC input.
+- **Grafana:** a separate Modbus-to-Prometheus exporter polling the Cerbo (so the app is not in
+  the monitoring path) vs. the app exposing metrics — undecided; lean exporter.
+
+---
+
+## History: the 2026-08-28 design (superseded 2026-09-08)
+
+```
+mains AC ──[smart plug]──> Mean Well LRS-600-48 ──> SmartSolar MPPT 100/30 ──> LiFePO4 ──> loads
+                                                          │ VE.Direct USB → the app     │ SmartShunt (USB → the app)
+```
+
+A DC-coupled, combiner-free UPS: a 48 V brick spoofing a panel into the MPPT so mains could
+charge; loads on the battery bus permanently; smart plug on the brick's AC cord as the RF-quiet
+button and future SOC-window automation; the app owning both VE.Direct USB cables directly with
+roles (Load / Battery / Charger). Why it lost: David also wanted PC/rack backup, which needs an
+inverter with a transfer switch — and once a MultiPlus is in the picture its own 50 A charger
+makes the brick+MPPT-as-charger redundant, while a Cerbo GX gives VRM + Grafana + one network
+interface for everything. **The MPPT and the LRS are still on hand**: the MPPT is Phase 2's
+solar controller; the LRS-600-48 is spare.
+
+### Bench log, 2026-09-07 (first wiring attempt under the old design)
+
+- MPPT `PID 0xA056`, FW 1.74, VE.Direct cable serial `VEB32G93A` (COM14 on HAMBENCH).
+  Configured battery-first over Bluetooth per Victron's instructions.
+- **LRS-600-48 arrived with a marginal 115/230 selector** — dark until the switch was worked
+  vigorously. It carries full mains current in the 115 position; contact cleaner if it recurs.
+- **LRS trips instantly when the MPPT's PV input is connected**: spark at the Anderson, DC-OK
+  LED out, recovers on unplug. A 90 s VE.Direct capture during a hot-plug showed `VPV` never
+  above 0.04 V — the supply collapsed before the MPPT saw one frame (`ERR 0`, `OR 0x1`). Cause:
+  the MPPT's PV-input capacitor bank looks like a short for a few ms and the LRS's hiccup-mode
+  overload protection latches. No MPPT setting affects it. An NTC inrush limiter (Ametherm
+  SL32 5R020) was ordered as the fix and is now moot — noted here because it is the answer if a
+  bench supply ever feeds the MPPT again (HRP-series supplies with constant-current limiting
+  avoid the problem outright).
+- **Shunt wiring lesson (still true):** the shunt measures only current crossing BATTERY MINUS →
+  SYSTEM MINUS. Charger negative on the *system* side or charge current is invisible; with no
+  battery the supply's negative takes the BATTERY MINUS post or the shunt reads 0.000 A.
+- **The Astron RS-35M linear died** (transformer/cap noise, RF hash) — third supply lost this
+  year after two Samlex SEC-1235M; mains quality or heat suspected, the homelab UPS's line log
+  is the instrument. Interim: Astron SS-50 switcher on the bus, trimmed toward 13.8 V. All bench
+  wiring is 10 AWG with PP45 contacts.
+
+### Alternatives considered on 2026-08-28 and why not (kept for the record)
+
+- **West Mountain PWRgate / FET combiner** — RF-silent and simple, but dumb: no profiles, no
+  current limit, no visibility. Rejected on flexibility.
+- **Blue Smart IP67 12/25** — the near-pick then; lost to the MPPT+brick on VE.Direct telemetry.
+- **Orion XS DC-DC, Phoenix Smart IP43** — fine, overkill; David runs both on the boat.
+- **Inverter/charger (MultiPlus-style)** — rejected *then* as answering a different question.
+  It became the answer once PC backup entered scope on 2026-09-08.

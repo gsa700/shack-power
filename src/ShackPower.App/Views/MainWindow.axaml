@@ -82,6 +82,19 @@
         <TextBlock Grid.Column="1" Text="{Binding BatteryText}" FontFamily="Consolas" FontSize="15"
                    FontWeight="Bold" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Right"/>
       </Grid>
+      <!-- Cerbo GX rows: the MultiPlus and (Phase 2) the MPPT, present only when the hub reports them. -->
+      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding ChargerRowVisible}" Margin="0,0,0,6">
+        <TextBlock Grid.Column="0" Text="CHARGER" Width="150" FontSize="11" FontWeight="Bold"
+                   Foreground="{StaticResource DimBrush}" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding ChargerText}" FontFamily="Consolas" FontSize="15"
+                   FontWeight="Bold" Foreground="{Binding ChargerBrush}" HorizontalAlignment="Right"/>
+      </Grid>
+      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding SolarRowVisible}" Margin="0,0,0,6">
+        <TextBlock Grid.Column="0" Text="SOLAR" Width="150" FontSize="11" FontWeight="Bold"
+                   Foreground="{StaticResource DimBrush}" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="{Binding SolarText}" FontFamily="Consolas" FontSize="15"
+                   FontWeight="Bold" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Right"/>
+      </Grid>
       <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding Display.ShowDevice}" Margin="0,0,0,6">
         <TextBlock Grid.Column="0" Text="DEVICE" Width="150" FontSize="11" FontWeight="Bold"
                    Foreground="{StaticResource DimBrush}" VerticalAlignment="Center"/>

@@ -11,6 +11,9 @@
     <!-- Cross-platform serial support (Windows COMx, Linux /dev/tty*, macOS).
          Kept in step with the runtime, matching the siblings. -->
     <PackageReference Include="System.IO.Ports" Version="10.0.10" />
+    <!-- Modbus TCP client for the Cerbo GX hub (2026-09 architecture); its server half runs the
+         hardware-free tests. MIT, .NET Standard 2.0/2.1. -->
+    <PackageReference Include="FluentModbus" Version="5.3.2" />
   </ItemGroup>
 
 </Project>

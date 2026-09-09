@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Avalonia.Media;
 using ShackPower.App.Services;
 using ShackPower.App.Settings;
+using ShackPower.Core.Cerbo;
 
 namespace ShackPower.App.ViewModels;
 
@@ -31,7 +32,9 @@ public sealed class SetupViewModel : ViewModelBase
         _exitForUpdate = exitForUpdate;
 
         RefreshPortsCommand = new RelayCommand(RefreshPorts);
-        ToggleConnectCommand = new RelayCommand(ToggleConnect, () => _meter.IsSimulated || SelectedPort is not null);
+        ToggleConnectCommand = new RelayCommand(ToggleConnect,
+            () => _meter.IsSimulated || (_meter.IsCerbo ? CerboEndpointValid : SelectedPort is not null));
+        FindCerboDevicesCommand = new RelayCommand(() => _ = FindCerboDevicesAsync(), () => !_cerboBusy && CerboEndpointValid);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         CheckOrInstallCommand = new RelayCommand(() => _ = CheckOrInstallAsync(), () => !_updateBusy);
         OpenReleasePageCommand = new RelayCommand(() => OpenUrl(_releaseUrl));
@@ -108,7 +111,130 @@ public sealed class SetupViewModel : ViewModelBase
     {
         if (_meter.IsConnected) _meter.Disconnect();
         else if (_meter.IsSimulated) _meter.Connect("SIM");
+        else if (_meter.IsCerbo) { if (CerboEndpointValid) _meter.Connect(CerboHost.Trim()); }
         else if (SelectedPort is { } port) _meter.Connect(port, PortIdentity.SerialFor(port));
+    }
+
+    // ---- Source: VE.Direct cable vs Cerbo GX ----
+
+    /// <summary>The kind this run was built with — the radio buttons edit the *saved* choice,
+    /// which takes effect on the next start (the reading source is fixed per MeterService).</summary>
+    public bool RunningOnCerbo => _meter.IsCerbo;
+
+    private bool _useCerbo;
+    public bool UseCerbo
+    {
+        get => _useCerbo;
+        set
+        {
+            if (SetProperty(ref _useCerbo, value))
+            {
+                OnPropertyChanged(nameof(UseSerial));
+                OnPropertyChanged(nameof(SourceRestartNote));
+                OnPropertyChanged(nameof(SourceRestartNoteVisible));
+            }
+        }
+    }
+
+    public bool UseSerial
+    {
+        get => !_useCerbo;
+        set => UseCerbo = !value;
+    }
+
+    public bool SourceRestartNoteVisible => !_meter.IsSimulated && UseCerbo != RunningOnCerbo;
+    public string SourceRestartNote => UseCerbo
+        ? "Saved. Shack Power reads from the Cerbo GX the next time it starts."
+        : "Saved. Shack Power reads the VE.Direct cable the next time it starts.";
+
+    private string _cerboHost = "";
+    /// <summary>Cerbo GX address as typed — <c>host</c> or <c>host:port</c>, e.g. <c>10.0.1.30</c>.</summary>
+    public string CerboHost
+    {
+        get => _cerboHost;
+        set
+        {
+            if (SetProperty(ref _cerboHost, value ?? ""))
+            {
+                OnPropertyChanged(nameof(CerboEndpointValid));
+                ToggleConnectCommand.RaiseCanExecuteChanged();
+                FindCerboDevicesCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool CerboEndpointValid =>
+        !string.IsNullOrWhiteSpace(CerboHost) && CerboSettings.ParseEndpoint(CerboHost) is not null;
+
+    private string _cerboBatteryUnit = "";
+    public string CerboBatteryUnit { get => _cerboBatteryUnit; set => SetProperty(ref _cerboBatteryUnit, value ?? ""); }
+
+    private string _cerboVeBusUnit = "";
+    public string CerboVeBusUnit { get => _cerboVeBusUnit; set => SetProperty(ref _cerboVeBusUnit, value ?? ""); }
+
+    private string _cerboSolarUnit = "";
+    public string CerboSolarUnit { get => _cerboSolarUnit; set => SetProperty(ref _cerboSolarUnit, value ?? ""); }
+
+    /// <summary>Parse a unit-ID text box: 1–247, else null (blank = not configured).</summary>
+    public static int? ParseUnit(string text) =>
+        int.TryParse(text?.Trim(), out var n) && n is >= 1 and <= 247 ? n : null;
+
+    private bool _cerboBusy;
+    private string _cerboFoundText = "";
+    /// <summary>Result of the last "Find devices" probe, one line per service found.</summary>
+    public string CerboFoundText { get => _cerboFoundText; private set => SetProperty(ref _cerboFoundText, value); }
+    public bool CerboFoundVisible => !string.IsNullOrEmpty(CerboFoundText);
+
+    public RelayCommand FindCerboDevicesCommand { get; }
+
+    /// <summary>
+    /// Ask the GX which unit IDs answer as a battery monitor, an inverter/charger and a solar
+    /// charger, and fill the unit boxes from what comes back. Unit IDs are dynamic since Venus
+    /// 2.60, so this replaces reading them off the GX's Modbus services screen. Read-only probes,
+    /// own connection, off the UI thread — it can run while the live link is up.
+    /// </summary>
+    private async Task FindCerboDevicesAsync()
+    {
+        var endpoint = CerboSettings.ParseEndpoint(CerboHost);
+        if (endpoint is null) return;
+        _cerboBusy = true;
+        FindCerboDevicesCommand.RaiseCanExecuteChanged();
+        CerboFoundText = $"Probing {CerboHost.Trim()}…";
+        OnPropertyChanged(nameof(CerboFoundVisible));
+        try
+        {
+            var found = await Task.Run(() =>
+            {
+                using var modbus = new FluentModbusCerbo(endpoint, connectTimeoutMs: 3000, readTimeoutMs: 1500);
+                modbus.Connect();
+                return CerboDiscovery.Probe(modbus);
+            });
+
+            if (found.Count == 0)
+            {
+                CerboFoundText = "Connected, but no Victron devices answered. Is the shunt plugged into the GX's VE.Direct port?";
+            }
+            else
+            {
+                var lines = found.Select(s => $"unit {s.UnitId}: {s.Summary}");
+                CerboFoundText = string.Join("\n", lines);
+                if (found.FirstOrDefault(s => s.Kind == CerboServiceKind.Battery) is { } b) CerboBatteryUnit = b.UnitId.ToString();
+                if (found.FirstOrDefault(s => s.Kind == CerboServiceKind.VeBus) is { } v) CerboVeBusUnit = v.UnitId.ToString();
+                if (found.FirstOrDefault(s => s.Kind == CerboServiceKind.Solar) is { } p) CerboSolarUnit = p.UnitId.ToString();
+            }
+        }
+        catch (Exception ex)
+        {
+            CerboFoundText = ex is System.Net.Sockets.SocketException { SocketErrorCode: System.Net.Sockets.SocketError.ConnectionRefused }
+                ? "Connection refused — enable Modbus TCP on the GX (Settings → Integrations → Modbus TCP server)."
+                : $"Could not reach the GX: {ex.Message}";
+        }
+        finally
+        {
+            _cerboBusy = false;
+            FindCerboDevicesCommand.RaiseCanExecuteChanged();
+            OnPropertyChanged(nameof(CerboFoundVisible));
+        }
     }
 
     private void OnMeterState()

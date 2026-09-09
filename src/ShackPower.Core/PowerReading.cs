@@ -58,6 +58,21 @@ public sealed record PowerReading
     /// (<c>H18</c>, 0.01 kWh on the wire).</summary>
     public double? TotalKwhCharged { get; init; }
 
+    // ---- Cerbo GX path only (null on a direct VE.Direct link) ----
+
+    /// <summary>The MultiPlus's state from the GX's vebus service, when a VE.Bus unit is configured.</summary>
+    public Cerbo.ChargerSnapshot? Charger { get; init; }
+
+    /// <summary>The MPPT's state from the GX's solarcharger service, when configured (Phase 2).</summary>
+    public Cerbo.SolarSnapshot? Solar { get; init; }
+
+    /// <summary>DVCC system charge-current limit in amps; −1 = no limit, 0 = charging inhibited
+    /// (the operating-session quiet mode), null when not read.</summary>
+    public double? DvccChargeLimitAmps { get; init; }
+
+    /// <summary>Convenience: the quiet-mode flag as the GX sees it.</summary>
+    public bool ChargeInhibited => DvccChargeLimitAmps == 0;
+
     private static readonly (int Bit, string Name)[] AlarmBits =
     [
         (1, "low voltage"), (2, "high voltage"), (4, "low SOC"),

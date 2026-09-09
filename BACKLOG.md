@@ -1,55 +1,64 @@
 # Backlog
 
 Parked ideas, with reasoning, so no session re-litigates them cold. The scope and the shack
-power architecture these serve are in `docs/power-system.md` — read that first.
+power architecture these serve are in `docs/power-system.md` (why) and `docs/cerbo-modbus.md`
+(how the app talks to the Cerbo GX) — read those first. Revised 2026-09-09 for the Cerbo/Modbus
+architecture; the pre-pivot items are at the bottom for the record.
 
 ## Roadmap (ordered)
 
-- **Multi-device VE.Direct support with roles.** The W2 Monitor fork of the family pattern:
-  a manager owning N MeterServices (port + chip serial + **role**: Load / Battery / Supply /
-  Charger), `Shunts[]` config list with legacy single-port migration, add/remove list in
-  Setup's Connection tab. Role-aware presentation: battery section (SOC/TTG) appears when a
-  Battery-role device exists; per-role daily CSVs (today's files become the Load history,
-  untouched). A `MON 0` shunt is presumptively Battery, `MON 1` Load — suggest, let the user
-  override. Sequencing question deliberately open: build against `--sim` before the second
-  shunt exists, or wait for hardware. **MPPT charger field parsing (VPV/PPV/CS/ERR) is
-  first-class here, not a side note** — the decided topology puts a SmartSolar 100/30 on
-  VE.Direct in this shack, so the Charger role gets real hardware to develop against, and
-  ON MAINS becomes the charger's own state field rather than an inference.
-- **Charger control via local smart plug + SOC-window automation** (post multi-device). A
-  local-HTTP smart plug (Shelly-class, no cloud) on the charger's AC cord; the app gains a
-  Charger toggle ("quiet mode" — charger off while operating) and SOC-window charging: on
-  below ~60%, off at ~90%, with a "top to 100%" button for storm-watch reserve. The smart
-  shunt plus a dumb relay equals a smart charger, and implements the LiFePO4 don't-park-at-100%
-  guidance. Control never goes through reverse-engineered BLE writes — shunt SOC in, plug
-  relay out.
-- **Alerts.** Key on **SOC thresholds** (and link-loss), never on "battery discharging" —
-  discharge is this shack's normal operating mode (charger-off-on-the-air routine). Toast/sound
-  when unattended; ties into the always-on-station-box watchdog idea from the pre-plan scope
-  talk.
-- **Combined chart, multi-device follow-up.** The v0.1.2 rebuild (VictronConnect Trends style:
-  two channels, dual color-matched axes) resolved David's "still a mess" verdict on v0.1.1's
-  three-band attempt — two-at-a-time is the load-bearing lesson. When multi-device lands, the
-  channel pickers grow entries per device/role (battery amps, SOC, charger watts…); the
-  two-channel constraint stays.
+1. **Hardware-day verification (2026-09-10).** Run the checklist in `docs/cerbo-modbus.md`:
+   Modbus TCP + DVCC enabled on the GX, Find devices discovers the shunt and the MultiPlus,
+   readings match VictronConnect, CHARGER row flips to `Inverting · MAINS LOST` on an AC pull.
+   Record unit IDs and any register surprises in that doc. Then release **v0.2.0-beta**.
+2. **Charge-inhibit fail-safe (blocks exposing "quiet mode").** `ChargeInhibit` (DVCC 2705 = 0)
+   exists and is tested, but a register write has no timeout. Build the GX-side watchdog as a
+   Node-RED flow on Venus OS Large (restore −1 if the app's 30 s re-assert stops for ~90 s),
+   verify on the bench with a person watching, **listen on HF for whether the charger stage at
+   0 A is actually quiet**, then add the Quiet button + auto "operating = inhibit". Decide
+   blanket vs HF-only (band via CAT, see virtual-flex) and the SOC floor below which inhibit is
+   refused — the 105 Ah bank also backs the PC.
+3. **SOC-window charging + forced sync charge.** Hold 85–90 % day-to-day via the DVCC limit,
+   top to 100 % on a schedule (shunt resync — coulomb counters drift) or on a "storm watch"
+   button; never while operating. Sync on the shunt's synchronised flag, not the charger's
+   float state. Thresholds re-decided for 105 Ah with the PC-backup reserve in mind.
+4. **Alerts.** Key on **SOC thresholds** and link loss, never on "discharging" — discharge is
+   normal here. Toast/sound when unattended.
+5. **Grafana route.** Lean: a separate Modbus-to-Prometheus exporter polling the Cerbo (the app
+   stays out of the monitoring path; Prometheus is on NetMon 10.0.1.23). Alternative: the app
+   exposes a small metrics endpoint. Decide after hardware day.
+6. **Phase 2 solar.** When the 450 W panel is bought: MPPT on the Cerbo's VE.Direct port, SOLAR
+   row already renders when a solarcharger unit is configured; extend the CSV (PV power) and the
+   chart pickers (PV watts, charger amps, SOC — two-at-a-time constraint stays).
+7. **CSV columns for the Cerbo era.** Today's `timestamp,volts,amps,watts` stays byte-compatible;
+   add an optional sibling file or new columns (soc, charger_state, ac_in, pv_w) without
+   breaking the reader. Decide format before hardware day's first real logging.
 
 ## Smaller / standing
 
-- **Release v0.1.2-beta**: the sim-logging isolation fix (`--sim` logs to `logs-sim`, commit
-  eb78350) is merged but unreleased.
+- **Installer UX (from the 2026-09-07 testbed review):** after self-install, start the
+  installed copy and exit the original — today the Downloads copy stays alive with no port.
+  Family-wide; fix here first, port to the siblings.
+- **Cable-path port picker lacks W2's Detect/serial display** (same review). Passive VE.Direct
+  detect (listen 3 s for a checksum-valid block) is safe — receive-only protocol. Low priority
+  now that the shack's shunt lives on the Cerbo; still useful on the Linux testbed.
 - **Sim-row cleanup decision (David's call, never-delete policy):** the real
-  `power-20260828.csv` carries interleaved synthetic rows from dev sim sessions ~18:29–18:58
-  (transmit-shaped dips to −21 A that never happened). Options: leave it as one known-messy
-  day, or filter by stated heuristic with the original archived aside.
+  `power-20260828.csv` carries interleaved synthetic rows from dev sim sessions ~18:29–18:58.
+  Options: leave it as one known-messy day, or filter by stated heuristic with the original
+  archived aside.
 - **Chart hover crosshair on touch / keyboard** — pointer-only today.
-- **Passive VE.Direct detect.** Listening 3 s for a checksum-valid block is safe (receive-only
-  protocol — contrast W2's Detect, which can key a radio). Unnecessary while cable serials pin
-  ports; revisit with multi-device.
-- **SOC/battery-monitor fields are parsed but not yet exercised on real hardware** — this station's
-  shunt runs as a DC meter. The planned battery shunt lights them up for real.
 - **Uninstall leaves the single-file extraction dir** (`%TEMP%\.net\ShackPower` / `$HOME/.net/…`)
-  — inherited family-wide issue, documented in lp100a-monitor's CLAUDE.md. Fix belongs in the
-  uninstall trampoline; fix Linux first if separated.
-- **Linux/CM5 hardware pass** — cross-published, never run on hardware; install/tray/serial
-  all unproven there.
+  — inherited family-wide issue, documented in lp100a-monitor's CLAUDE.md.
+- **Linux/CM5 hardware pass** — the testbed (10.0.1.193) has the installed app holding the
+  shunt cable; the Cerbo path is untested on Linux.
 - **Auto-start with Windows** — undecided; a Startup shortcut is the mechanism when wanted.
+
+## Superseded on 2026-09-08 (kept for the record)
+
+- **Multi-device VE.Direct-USB with roles** (N cables pinned by serial, a manager owning N
+  MeterServices). The Cerbo makes this one Modbus connection with per-service unit IDs instead;
+  the *role* idea survives as service kind. If a no-hub multi-cable shack ever needs it, the
+  design is in the git history of this file.
+- **Smart-plug charger control** (Shelly-class local HTTP on the charger's AC cord). Replaced by
+  the DVCC register write — but its hardware `auto_on` fail-safe is exactly what item 2 above
+  has to rebuild on the GX side.

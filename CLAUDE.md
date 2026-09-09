@@ -1,8 +1,8 @@
 ﻿# Shack Power (shack-power)
 
-Cross-platform desktop monitor for a **Victron SmartShunt 300A** over VE.Direct serial —
-live V/A/W readout, daily CSV power logging, history charts. **.NET 10 + Avalonia 12.1.1**,
-MVVM. Windows / Linux / Raspberry Pi (arm64). GPLv3. By David Erickson (AB0R).
+Cross-platform desktop monitor for a ham shack's Victron power system — live V/A/W readout,
+battery SOC, charger state, daily CSV power logging, history charts. **.NET 10 + Avalonia
+12.1.1**, MVVM. Windows / Linux / Raspberry Pi (arm64). GPLv3. By David Erickson (AB0R).
 
 Third app in the station-tools family. **LP-100A Monitor** (`~/Documents/Programming/lp100a-monitor`)
 is the family's reference template and **W2 Monitor** (`~/Documents/Programming/w2-monitor-x`) its
@@ -11,20 +11,28 @@ single-meter service shape and CSV log pattern). Their CLAUDE.md files carry rat
 applies here — read them before "fixing" anything that looks odd.
 
 This app replaced the Python prototype at `~/shack-power-monitor/shack_power_monitor.py` at the
-2026-08-28 cutover (VictronConnect itself was retired for monitoring because it grabs every free
-COM port). The prototype's daily CSVs were byte-compatible by design and were copied into the
-data dir, so history is continuous across the handover; its folder is kept for reference.
+2026-08-28 cutover. The prototype's daily CSVs were byte-compatible by design and were copied
+into the data dir, so history is continuous across the handover; its folder is kept for reference.
 
-## Scope
+## Scope and architecture (revised 2026-09-08/09)
 
-**Shack Power monitors; VictronConnect (on the phone, over Bluetooth) configures.** Real-time
-monitoring of a ham shack's DC power system: today one SmartShunt in DC-meter mode on the
-station bus; the roadmap is N VE.Direct devices distinguished by configured **role**
-(Load / Battery / Supply / Charger), never blind summation. Not a configurator, not Bluetooth,
-not an AC-side or whole-Victron-ecosystem dashboard. The full scope statement, the recommended
-backup topology (charger → battery → loads, combiner-free, charger-off operating as the
-RF-silent mode), and the reasoning behind rejected alternatives live in
-**`docs/power-system.md`** — read it before touching the roadmap items in `BACKLOG.md`.
+**Shack Power monitors and automates shack-specific things; VictronConnect (phone, Bluetooth)
+and the Cerbo's remote console configure.** Not a configurator, not a VRM/VictronConnect
+replacement, not general Modbus tooling.
+
+Two reading sources behind one seam (`IReadingSource` → `MeterService` → views/logging/chart):
+
+- **Cerbo GX over Modbus TCP** — the current shack architecture. A Cerbo GX MKII owns the
+  SmartShunt (VE.Direct), the MultiPlus 12/1200 (VE.Bus) and, in Phase 2, the MPPT; the app is a
+  network client (`ShackPower.Core/Cerbo/*`). Everything about registers, unit IDs, the charge-
+  inhibit knob and its unsolved watchdog, and the hardware-day checklist is in
+  **`docs/cerbo-modbus.md`**. Why the system looks like this: **`docs/power-system.md`**.
+- **VE.Direct USB cable on the PC** — the original design, kept for shacks without a hub, for
+  the Linux testbed, and as the `--sim` baseline. Protocol notes below.
+
+Setup → Connection has the Source radio; it applies on the next start (a `MeterService` is built
+around one source). `--cerbo <host[:port]>` on the command line switches a run (and the saved
+choice) to the hub. `--sim` never persists the source.
 
 ## Build / run / test
 
@@ -32,13 +40,15 @@ RF-silent mode), and the reasoning behind rejected alternatives live in
 dotnet build                                     # needs the .NET 10 SDK (pinned in global.json)
 dotnet run --project src/ShackPower.App          # run the app (needs a desktop/DISPLAY)
 dotnet run --project src/ShackPower.App -- --sim # no hardware: synthetic SmartShunt data
+dotnet run --project src/ShackPower.App -- --cerbo 10.0.1.x   # point at a Cerbo GX
 dotnet test                                      # xUnit — all pure ShackPower.Core logic
 ```
 
 Solution: `ShackPower.sln`. Output assembly is `ShackPower` (`ShackPower.exe` on Windows).
 
-**Develop against `--sim`.** The real shunt's port is held by whichever monitor is live (the
-prototype until cutover, this app after) — never fight over COM13.
+**Develop against `--sim`** (or the FluentModbus loopback server the Cerbo tests spin up —
+`CerboReadingSourceTests` is the closest thing to hardware on a dev box). A live cable is held
+by whichever monitor is live; never fight over it.
 
 Publish a self-contained build (per platform):
 
@@ -57,14 +67,30 @@ dotnet run --project tools/IconGen -- assets/icon.svg src/ShackPower.App/Assets/
 
 ```
 src/
-  ShackPower.Core/  # NO UI. Protocol + pure logic — this is where the tests live.
-  ShackPower.App/   # Avalonia MVVM shell (Services/ ViewModels/ Views/ Controls/)
+  ShackPower.Core/        # NO UI. Protocol + pure logic — this is where the tests live.
+    Cerbo/                # Modbus TCP path: registers, decoder, reading source, discovery, ChargeInhibit
+  ShackPower.App/         # Avalonia MVVM shell (Services/ ViewModels/ Views/ Controls/)
 tests/ShackPower.Core.Tests/   # xUnit — Core only. Put new parsing/decision logic in Core with tests.
-tools/IconGen/    # SVG -> .ico + 256px PNG (from LP-100A)
+  Cerbo/                  # FakeCerboModbus + a real FluentModbus loopback server test
+tools/IconGen/            # SVG -> .ico + 256px PNG (from LP-100A)
+docs/                     # power-system.md (why), cerbo-modbus.md (how), screenshots/
 ```
 
 **Design rule (family-wide):** all non-UI logic lives in `ShackPower.Core` and is unit-tested;
-the App project is only the Avalonia shell.
+the App project is only the Avalonia shell. Third-party: `System.IO.Ports`, `FluentModbus` (MIT).
+
+## Cerbo / Modbus gotchas (the ones that bite)
+
+- **Units differ from VE.Direct**: SOC %×10 (not ‰), TTG seconds×0.01 (not minutes), vebus AC
+  power W×0.1, `/ConsumedAmphours` scale −10. `CerboRegisters` is copied from Victron's
+  `attributes.csv`; don't "correct" it from the VE.Direct table.
+- **Unit IDs are dynamic** (Venus ≥ 2.60); unit 100 is always system/settings and mirrors the
+  battery, so discovery skips it. Use Setup's Find devices or the GX's Available services list.
+- **An unpublished register fails the whole read block** — hence the narrow reads in
+  `CerboDecoder`. Modbus exceptions → null field; socket/IO errors → reconnect.
+- **Charge inhibit = DVCC limit (2705) = 0**, never `/Mode` inverter-only (kills pass-through)
+  and never the AC input. Needs DVCC on. **No GX-side watchdog exists yet** — do not expose the
+  inhibit as a routine control until the Node-RED flow in `docs/cerbo-modbus.md` is built.
 
 ## VE.Direct protocol (validated against the real SmartShunt, 2026-08-28)
 
@@ -80,37 +106,41 @@ the App project is only the Avalonia shell.
 - Units: `V`/`I` in mV/mA, `P` in W, `H17`/`H18` in 0.01 kWh (a probe once misread 225 as
   22.5 kWh — it is 2.25), `SOC` in ‰, `TTG` in minutes (−1 = infinite). `---` means "not
   available" and parses to null.
-- **This station's shunt is configured as a DC energy meter (`MON 1`)**, so `SOC`/`CE`/`TTG` are
-  `---` on this hardware. That is a device setting, not a fault; the fields must still parse for
-  installs where the shunt is in battery-monitor mode.
+- A shunt in DC energy-meter mode (`MON 1`) reports `SOC`/`CE`/`TTG` as `---`; in battery-monitor
+  mode (`MON 0`, the shack's shunt since 2026-09-07) they are live. Both must parse.
 - Lines starting `:` are async HEX-protocol messages that can interleave; skip them after framing.
 - Alarm reason `AR` is a bitmask: 1 low V, 2 high V, 4 low SOC, 8/16 low/high starter V,
-  32/64 low/high temperature, 128 mid voltage.
+  32/64 low/high temperature, 128 mid voltage. The Cerbo path maps its per-alarm registers onto
+  the same bits so `DescribeAlarm` serves both.
 
-## Cable identity
+## Cable identity (VE.Direct-USB path)
 
 Each VE.Direct USB cable is an FTDI FT-X (`PID_6015`); pin by chip serial, never by COM number
 (all COM numbers on this box changed across a Windows reinstall once):
 
 | Serial | Device | Note |
 |---|---|---|
-| **`VEAUI3T2A`** | SmartShunt 300A | battery leg, battery-monitor mode since 2026-09-07 |
-| **`VEB32G93A`** | SmartSolar MPPT 100/30 | first seen 2026-09-07 as COM14; fed by the LRS-600-48 |
+| **`VEAUI3T2A`** | SmartShunt 300A | on TestbedLinux 10.0.1.193 since 2026-09-07 evening; moves to the Cerbo's VE.Direct port in the new design |
+| **`VEB32G93A`** | SmartSolar MPPT 100/30 | on TestbedLinux with the shunt cable; Phase 2 hardware |
 
 The station's other FTDI adapters, from W2 Monitor's table: `A10KMB4VA` W2 #1, `AG0JFX7UA` W2 #2,
 `ABSCDI99A` LP-100A, `AD0JLU2FA` TM-V71A. **Never probe unknown adapters to identify them — two
 of those are transmitters.** VE.Direct needs no probe anyway: the protocol is receive-only.
 
-Also on this box: **VictronConnect holds every free COM port while open.** If ports look taken,
-close VictronConnect before suspecting anything else.
+Also on Windows boxes: **VictronConnect holds every free COM port while open.** If ports look
+taken, close VictronConnect before suspecting anything else. (Irrelevant on the Cerbo path.)
 
 ## Notes travel through this repo, not through memory
 
-Claude's saved memory does not cross machines — this repo is the only channel between sessions
-(the CM5/Pi will work this repo too, like the siblings). Nothing about the project may live only
-in memory: it goes in `CLAUDE.md`, `BACKLOG.md`, `CHANGELOG.md`, or a commit message. Write the
-reasoning, not just the conclusion — the next session did not run the experiment. Pull before
-editing the shared docs.
+Claude's saved memory is per machine — this repo is the primary channel between sessions and
+machines (HAMBENCH builds and releases; Techbench does design sessions and can edit docs; the
+Linux testbed and a CM5/Pi run the app). Nothing about the project may live only in memory: it
+goes in `CLAUDE.md`, `BACKLOG.md`, `CHANGELOG.md`, `docs/`, or a commit message. Write the
+reasoning, not just the conclusion — the next session did not run the experiment. **Pull before
+editing the shared docs; push when done** — the 2026-09-08 redesign sat only in Techbench's
+memory for a day and this repo said the opposite. As a backstop, every machine's Claude memory
+is readable (a day stale) from the NAS: `\\10.0.1.4\NAS_data\Hambench\_config\.claude\projects\…`
+and `\\10.0.1.4\NAS_data\Techbench\.claude\projects\…` (hidden folders).
 
 ## Release workflow
 
@@ -120,8 +150,15 @@ a **full "Latest"** GitHub release — `/releases/latest` excludes pre-releases,
 is invisible to the in-app updater. `<1.0` versions carry `-beta`. Two ordering traps (learned by
 W2): commit the version bump **before** publishing (binaries embed the sha), and smoke-test a
 published single-file binary before uploading (build/run can't surface single-file breaks).
-Update `CHANGELOG.md` every release.
+Update `CHANGELOG.md` every release. Release titles are the version only.
 
-## Build phases (2026-08-28 plan)
+## Milestones
 
-All six phases landed 2026-08-28, live cutover included: the installed copy took over COM13 from the retired Python prototype, its daily CSV continued the prototype's same-day file with a single header, and a real raw capture is committed as tests/Fixtures/vedirect-capture.bin (RealCaptureTests runs it through the full pipeline). Still open: Linux/CM5 hardware pass, physical unplug/replug and sleep/resume checks, tray interactive check.
+- **2026-08-28:** all six build phases landed, live cutover on COM13, eight releases to
+  v0.1.8-beta (combined chart, progressive zoom, zoom buttons). Real raw capture committed as
+  `tests/Fixtures/vedirect-capture.bin` (`RealCaptureTests`).
+- **2026-09-09:** Cerbo GX Modbus TCP device layer built and tested hardware-free ahead of the
+  2026-09-10 delivery; Source switch in Setup; CHARGER/SOLAR rows on the main window. Unreleased
+  until verified on the real hub (see `docs/cerbo-modbus.md` → Thursday checklist).
+- Still open: Linux/CM5 hardware pass, physical unplug/replug and sleep/resume checks on the
+  cable path, tray interactive check.

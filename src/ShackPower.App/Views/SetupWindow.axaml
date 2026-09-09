@@ -28,13 +28,53 @@
 
     <TabItem Header="Connection" AutomationProperties.Name="Connection">
       <StackPanel Margin="14,10,14,14">
-        <TextBlock Classes="label" Text="VE.DIRECT PORT"/>
-        <DockPanel>
-          <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshPortsCommand}" Margin="6,0,0,0"/>
-          <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="150"/>
-        </DockPanel>
-        <TextBlock Text="{Binding PinnedSerialText}" FontSize="12"
-                   Foreground="{StaticResource CardDimBrush}" Margin="0,6,0,0"/>
+        <!-- Where readings come from. The choice is saved and applies on the next start: the
+             reading source is fixed for a run, so a live cable link isn't yanked by a click. -->
+        <TextBlock Classes="label" Text="SOURCE" Margin="0,0,0,4"/>
+        <StackPanel Spacing="2">
+          <RadioButton Content="VE.Direct cable on this PC" IsChecked="{Binding UseSerial}"
+                       Foreground="{StaticResource CardTextBrush}"/>
+          <RadioButton Content="Cerbo GX over the network (Modbus TCP)" IsChecked="{Binding UseCerbo}"
+                       Foreground="{StaticResource CardTextBrush}"/>
+        </StackPanel>
+        <TextBlock Text="{Binding SourceRestartNote}" FontSize="12" Foreground="{StaticResource OrangeDeepBrush}"
+                   IsVisible="{Binding SourceRestartNoteVisible}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+
+        <!-- Cable: pick the port, pinned by the FTDI chip serial. -->
+        <StackPanel IsVisible="{Binding UseSerial}">
+          <TextBlock Classes="label" Text="VE.DIRECT PORT"/>
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshPortsCommand}" Margin="6,0,0,0"/>
+            <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="150"/>
+          </DockPanel>
+          <TextBlock Text="{Binding PinnedSerialText}" FontSize="12"
+                     Foreground="{StaticResource CardDimBrush}" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <!-- Cerbo GX: address plus the Modbus unit IDs of the services on it. -->
+        <StackPanel IsVisible="{Binding UseCerbo}">
+          <TextBlock Classes="label" Text="CERBO GX ADDRESS"/>
+          <TextBox Text="{Binding CerboHost}" PlaceholderText="host or IP (port 502 unless host:port)" MinWidth="220"
+                   HorizontalAlignment="Left"/>
+          <TextBlock Classes="label" Text="MODBUS UNIT IDS"/>
+          <Grid ColumnDefinitions="Auto,70,Auto,70,Auto,70" RowDefinitions="Auto">
+            <TextBlock Grid.Column="0" Text="Shunt" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox Grid.Column="1" Text="{Binding CerboBatteryUnit}" PlaceholderText="226"/>
+            <TextBlock Grid.Column="2" Text="MultiPlus" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <TextBox Grid.Column="3" Text="{Binding CerboVeBusUnit}" PlaceholderText="227"/>
+            <TextBlock Grid.Column="4" Text="MPPT" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <TextBox Grid.Column="5" Text="{Binding CerboSolarUnit}" PlaceholderText="—"/>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Find devices" Command="{Binding FindCerboDevicesCommand}"
+                    ToolTip.Tip="Ask the GX which unit IDs answer as a battery monitor, inverter/charger and solar charger, and fill the boxes"/>
+          </StackPanel>
+          <TextBlock Text="{Binding CerboFoundText}" FontSize="12" FontFamily="Consolas"
+                     Foreground="{StaticResource CardDimBrush}" IsVisible="{Binding CerboFoundVisible}"
+                     Margin="0,6,0,0" TextWrapping="Wrap"/>
+          <TextBlock FontSize="12" Foreground="{StaticResource CardDimBrush}" Margin="0,6,0,0" TextWrapping="Wrap"
+                     Text="Modbus TCP must be enabled on the GX: Settings → Integrations → Modbus TCP server. Unit IDs are listed there under Available services."/>
+        </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
           <Button Content="{Binding ToggleConnectText}" Command="{Binding ToggleConnectCommand}"/>

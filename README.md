@@ -9,11 +9,17 @@ VE.Direct cable's chip serial, so COM renumbering doesn't matter), parses the Sm
 1 Hz broadcast with checksum validation, and reconnects by itself across unplugs and sleep/resume.
 
 **Scope:** Shack Power monitors; VictronConnect (on your phone, over Bluetooth — they coexist)
-configures. The baseline is one SmartShunt in DC energy-meter mode watching the station supply.
-For shacks with battery backup, the roadmap adds multiple VE.Direct devices by role — a
-battery-monitor shunt bringing state-of-charge and time-to-go, and eventually charge management.
-The recommended backup topology this serves (AC charger → LiFePO4 → loads, no combiner, charger
-off while operating for total RF silence) is written up in
+configures. Two ways to read the system:
+
+- **A VE.Direct USB cable on the PC** — one SmartShunt, the original design.
+- **A Cerbo GX over the network (Modbus TCP)** — the hub owns the SmartShunt, a MultiPlus
+  inverter/charger and, later, an MPPT; Shack Power adds CHARGER and SOLAR rows (state, mains
+  presence, charge current), battery SOC and time-to-go, and finds the hub's Modbus unit IDs for
+  you. Charger quiet-mode control (DVCC charge-current limit) is built and tested but not yet
+  exposed — it waits on a GX-side watchdog; see [docs/cerbo-modbus.md](docs/cerbo-modbus.md).
+
+The shack power system this serves (MultiPlus + Epoch 105 Ah LiFePO4 + Cerbo GX, charger
+inhibited while operating for RF quiet) is written up in
 [docs/power-system.md](docs/power-system.md).
 
 Part of the AB0R station-tools family alongside

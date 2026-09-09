@@ -76,6 +76,24 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
     private string _deviceText = "--";
     public string DeviceText { get => _deviceText; private set => SetProperty(ref _deviceText, value); }
 
+    // --- Cerbo-only rows: present only when the GX reports that service ---
+    private string _chargerText = "--";
+    /// <summary>The MultiPlus, in one line: state, mains presence, DC charge current, and the
+    /// DVCC quiet-mode flag when charging is inhibited.</summary>
+    public string ChargerText { get => _chargerText; private set => SetProperty(ref _chargerText, value); }
+
+    private bool _hasCharger;
+    public bool ChargerRowVisible => _hasCharger;
+
+    private IBrush _chargerBrush = Palette.TextBrush;
+    public IBrush ChargerBrush { get => _chargerBrush; private set => SetProperty(ref _chargerBrush, value); }
+
+    private string _solarText = "--";
+    public string SolarText { get => _solarText; private set => SetProperty(ref _solarText, value); }
+
+    private bool _hasSolar;
+    public bool SolarRowVisible => _hasSolar;
+
     // --- alarm + status ---
     private bool _alarmVisible;
     public bool AlarmVisible { get => _alarmVisible; private set => SetProperty(ref _alarmVisible, value); }
@@ -139,10 +157,40 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
             BatteryText = $"{soc:0.0} %{ttg}";
         }
 
-        DeviceText = r.DeviceName is { } name ? $"{name} · FW {r.Firmware}" : "--";
+        DeviceText = r.DeviceName is { } name
+            ? (r.Firmware is { } fw ? $"{name} · FW {fw}" : name) : "--";
+
+        RenderCharger(r);
+        RenderSolar(r);
 
         AlarmVisible = r.AlarmOn;
         if (r.AlarmOn) AlarmText = $"ALARM: {PowerReading.DescribeAlarm(r.AlarmReasons)}";
+    }
+
+    private void RenderCharger(PowerReading r)
+    {
+        var had = _hasCharger;
+        _hasCharger = r.Charger is not null;
+        if (had != _hasCharger) OnPropertyChanged(nameof(ChargerRowVisible));
+        if (r.Charger is not { } c) return;
+
+        // Lead with the one word that matters, then the mains story, then what the battery gets.
+        var mains = c.IsInverting ? "MAINS LOST" : c.AcInConnected ? "on mains" : "no AC in";
+        var dc = c.DcAmps is { } a ? $" · {a:+0.0;-0.0;0.0} A" : "";
+        var quiet = r.ChargeInhibited ? " · QUIET" : "";
+        ChargerText = $"{c.StateName} · {mains}{dc}{quiet}";
+        ChargerBrush = c.IsInverting ? Palette.OrangeBrush : Palette.TextBrush;
+    }
+
+    private void RenderSolar(PowerReading r)
+    {
+        var had = _hasSolar;
+        _hasSolar = r.Solar is not null;
+        if (had != _hasSolar) OnPropertyChanged(nameof(SolarRowVisible));
+        if (r.Solar is not { } s) return;
+        var pv = s.PvWatts is { } w ? $" · {w:0} W PV" : "";
+        var yield = s.YieldTodayKwh is { } y ? $" · {y:0.0} kWh today" : "";
+        SolarText = $"{s.StateName}{pv}{yield}";
     }
 
     private void BlankReadouts()
@@ -150,9 +198,13 @@ public sealed class MainWindowViewModel : ViewModelBase, IDisposable
         _last = null;
         VoltsText = AmpsText = WattsText = "--";
         VoltsBrush = Palette.CardTextBrush;
-        MinMaxText = EnergyText = BatteryText = DeviceText = "--";
+        MinMaxText = EnergyText = BatteryText = DeviceText = ChargerText = SolarText = "--";
         _hasBattery = false;
         OnPropertyChanged(nameof(BatteryRowVisible));
+        _hasCharger = false;
+        OnPropertyChanged(nameof(ChargerRowVisible));
+        _hasSolar = false;
+        OnPropertyChanged(nameof(SolarRowVisible));
         AlarmVisible = false;
     }
 

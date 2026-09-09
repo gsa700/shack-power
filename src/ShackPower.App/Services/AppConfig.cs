@@ -31,6 +31,30 @@ public sealed class AppConfig
     public string? Port { get; set; }
     public string? Serial { get; set; }
 
+    /// <summary>Where readings come from: <c>Serial</c> (a VE.Direct USB cable on this PC — the
+    /// original design, still used on the Linux testbed) or <c>Cerbo</c> (Modbus TCP to a Cerbo GX
+    /// that owns the cables — the 2026-09 architecture). Missing/unknown → Serial.</summary>
+    public string Source { get; set; } = "Serial";
+
+    /// <summary>Cerbo GX address as typed: <c>host</c> or <c>host:port</c> (default port 502).</summary>
+    public string? CerboHost { get; set; }
+
+    /// <summary>Modbus unit IDs on the GX. Battery is the SmartShunt (required); the others are
+    /// optional and add the charger / solar rows when set. Found with Setup's "Find devices".</summary>
+    public int? CerboBatteryUnit { get; set; }
+    public int? CerboVeBusUnit { get; set; }
+    public int? CerboSolarUnit { get; set; }
+
+    public bool UseCerbo => string.Equals(Source, "Cerbo", StringComparison.OrdinalIgnoreCase);
+
+    public Core.Cerbo.CerboSettings ToCerboSettings() => new()
+    {
+        Host = CerboHost ?? "",
+        BatteryUnit = (byte)Math.Clamp(CerboBatteryUnit ?? 0, 0, 255),
+        VeBusUnit = CerboVeBusUnit is { } v ? (byte)Math.Clamp(v, 0, 255) : null,
+        SolarUnit = CerboSolarUnit is { } s ? (byte)Math.Clamp(s, 0, 255) : null,
+    };
+
     public bool LogEnabled { get; set; } = true;
     public bool CheckUpdatesAtStartup { get; set; }
     public DisplayConfig Display { get; set; } = new();
