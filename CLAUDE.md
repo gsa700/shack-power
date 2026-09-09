@@ -142,6 +142,26 @@ memory for a day and this repo said the opposite. As a backstop, every machine's
 is readable (a day stale) from the NAS: `\\10.0.1.4\NAS_data\Hambench\_config\.claude\projects\…`
 and `\\10.0.1.4\NAS_data\Techbench\.claude\projects\…` (hidden folders).
 
+## Field notes from the Fedora box (from the W2 session, 2026-09-09)
+
+Cross-project findings that apply here because all three station apps share the same Avalonia path.
+Evidence lives in `w2-monitor-x/BACKLOG.md`; this is the pointer.
+
+- **"Always on top": keep the checkbox visible everywhere and add a one-line note — do not hide it
+  on Wayland.** Tested on three boxes: works on Windows and on **Fedora 44 / GNOME** (this app
+  included, both set and unset), fails only on the Pi CM5 under labwc. It isn't a Wayland question: on
+  GNOME the app runs as an X11 client under XWayland and Mutter honours `_NET_WM_STATE_ABOVE`; labwc's
+  XWayland WM doesn't. There is no honest runtime test — an X11 client can set the hint but can't read
+  back whether it took — so hiding the control on "Wayland" would take a working feature away from
+  every GNOME user. *"May not take effect on some Linux desktops"* beside the checkbox is true, cheap,
+  and wrong nowhere.
+- **Fedora 44 x64 rendering is smooth and, by eye, indistinguishable from Windows.** W2 ran 45 h
+  continuous there with no crash. First real data on Linux render performance for this toolkit stack.
+- **A VE.Direct cable is enumerated on that box** — `usb-VictronEnergy_BV_VE_Direct_cable_VEAUI3T2`
+  on `/dev/ttyUSB3` as of 2026-09-07 (`TestbedLinux`, 10.0.1.193, user `derickson`, SSH by key from
+  HAMBENCH). Recorded only as "seen"; which device is behind it, and whether it's the shunt this app
+  owns on COM13 here or a second cable, wasn't checked from the W2 session.
+
 ## Release workflow
 
 `gh` is authed as `gsa700`; repo is `gsa700/shack-power`. A release = git tag + three
