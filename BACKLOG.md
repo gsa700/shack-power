@@ -36,6 +36,14 @@ architecture; the pre-pivot items are at the bottom for the record.
 
 ## Smaller / standing
 
+- **SIGTERM handling on Linux (testbed handoff 2026-09-07):** a stray instance did not exit
+  within 2 s of SIGTERM and needed SIGKILL. Logout and `systemd stop` send SIGTERM; handle it
+  like a window close (flush config, release the port/socket, exit). `PosixSignalRegistration`
+  for SIGTERM/SIGINT in Program.cs → `Dispatcher.UIThread.Post(mainWindow.Close)`. Family-wide.
+- **"Always on top" note beside the checkbox (W2 field notes 2026-09-09):** keep the checkbox
+  everywhere, add *"May not take effect on some Linux desktops"* — works on Windows and Fedora
+  GNOME (XWayland honours `_NET_WM_STATE_ABOVE`), fails only under labwc on the CM5; no honest
+  runtime test exists, so don't hide it.
 - **Installer UX (from the 2026-09-07 testbed review):** after self-install, start the
   installed copy and exit the original — today the Downloads copy stays alive with no port.
   Family-wide; fix here first, port to the siblings.

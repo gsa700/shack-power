@@ -160,7 +160,18 @@ Evidence lives in `w2-monitor-x/BACKLOG.md`; this is the pointer.
 - **A VE.Direct cable is enumerated on that box** — `usb-VictronEnergy_BV_VE_Direct_cable_VEAUI3T2`
   on `/dev/ttyUSB3` as of 2026-09-07 (`TestbedLinux`, 10.0.1.193, user `derickson`, SSH by key from
   HAMBENCH). Recorded only as "seen"; which device is behind it, and whether it's the shunt this app
-  owns on COM13 here or a second cable, wasn't checked from the W2 session.
+  owns on COM13 here or a second cable, wasn't checked from the W2 session. **Resolved 2026-09-09
+  (Shack Power session):** it is the shunt's cable — both Victron cables (`VEAUI3T2A` shunt,
+  `VEB32G93A` MPPT) moved from HAMBENCH to the testbed on the evening of 2026-09-07, which is why
+  COM13/COM14 are gone here; nothing is on their far ends until the shunt is wired to the battery
+  again, and in the Cerbo design the shunt cable moves to the GX's VE.Direct port anyway.
+- **Testbed handoff from Techbench (2026-09-07, `~/Documents/briefing-2026-09-07-techbench.md`,
+  also on the NAS as `Loadbench\Documents\Testbed-Apps-Handoff-2026-09-07.md`):** all three apps
+  self-installed and ran fine on Fedora 44 x64 (SELinux 0 denials, XWayland, .desktop valid). Items
+  for this app: port picker should show the VE.Direct chip serial like W2's SerialDisplay; the
+  self-installer leaves the original copy running; **SIGTERM is not handled** (a stray instance
+  needed SIGKILL — logout/systemd stop use SIGTERM, treat it like a window close). Tracked in
+  `BACKLOG.md`. The LP-100A pinning item in the same file belongs to that repo.
 
 ## Release workflow
 
