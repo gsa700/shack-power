@@ -32,6 +32,12 @@ window, three numbers, a chart, a CSV. That is the product, and the Cerbo/Modbus
   heartbeats, exporters, SOC-window automation) is a separate headless project or a Node-RED
   flow on the GX — see BACKLOG. One small dependency added for the hub (FluentModbus); adding
   another needs a reason written here.
+- **Not a copy of the Cerbo console, and not replaced by it either (David, 2026-09-12).** The GX's
+  web console shows every device and every setting; VRM keeps the months-long archive. Neither
+  answers the shack's questions: what happened during *that over*, second by second, on the
+  chart in front of you, with the charger state and "on the air" in the same glance. That 1 Hz
+  local record + chart is the app's core and stays here. Don't rebuild the console's device tree
+  or VRM's dashboards inside the app; put the console one click away instead.
 - **Don't fork it.** The temptation to spin off "the simple one" was considered and rejected
   2026-09-12: v0.1.8-beta is preserved as a tagged release, the seam keeps both sources honest in
   one binary, and a fourth repo would double the family's already-lagging shared maintenance.
