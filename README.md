@@ -8,8 +8,9 @@ port while open and offers no logging. Shack Power opens exactly one port (pinne
 VE.Direct cable's chip serial, so COM renumbering doesn't matter), parses the SmartShunt's
 1 Hz broadcast with checksum validation, and reconnects by itself across unplugs and sleep/resume.
 
-**Scope:** Shack Power monitors; VictronConnect (on your phone, over Bluetooth — they coexist)
-configures. Two ways to read the system:
+**What it is:** a lightweight, basic app that tells you what your DC power is doing. That stays
+true whichever way it reads the system. Shack Power monitors; VictronConnect (on your phone, over
+Bluetooth — they coexist) configures. Two ways to read the system:
 
 - **A VE.Direct USB cable on the PC** — one SmartShunt, the original design.
 - **A Cerbo GX over the network (Modbus TCP)** — the hub owns the SmartShunt, a MultiPlus

@@ -14,6 +14,30 @@ This app replaced the Python prototype at `~/shack-power-monitor/shack_power_mon
 2026-08-28 cutover. The prototype's daily CSVs were byte-compatible by design and were copied
 into the data dir, so history is continuous across the handover; its folder is kept for reference.
 
+## What this app IS — the rule that outranks every roadmap item (David, 2026-09-12)
+
+**Shack Power is a lightweight, basic app that tells you what your DC power is doing.** One
+window, three numbers, a chart, a CSV. That is the product, and the Cerbo/Modbus work is an
+*additional source* for it, not a new identity. Protect this deliberately:
+
+- **The cable mode is the baseline, not a legacy mode.** A SmartShunt on a VE.Direct USB cable
+  with no hub must keep working exactly as v0.1.8 did, and it is the default on a fresh install.
+  Every release is smoke-tested in `--sim` and judged against that: same window, same speed,
+  same clarity.
+- **Nothing hub-shaped is visible unless a hub is configured.** No CHARGER/SOLAR rows, no
+  Modbus vocabulary, no extra tabs in the simple case. New capability arrives as an *optional row
+  or panel that appears only when its data exists*, never as a mode the user must understand.
+- **Stay lightweight.** No background services, schedulers, web servers, message brokers or
+  databases inside this GUI. Anything that wants to run 24/7 without a window (watchdog
+  heartbeats, exporters, SOC-window automation) is a separate headless project or a Node-RED
+  flow on the GX — see BACKLOG. One small dependency added for the hub (FluentModbus); adding
+  another needs a reason written here.
+- **Don't fork it.** The temptation to spin off "the simple one" was considered and rejected
+  2026-09-12: v0.1.8-beta is preserved as a tagged release, the seam keeps both sources honest in
+  one binary, and a fourth repo would double the family's already-lagging shared maintenance.
+  If the product ever stops satisfying the first sentence above, that is the moment to split
+  by *shape* (desktop viewer vs headless agent), not by source.
+
 ## Scope and architecture (revised 2026-09-08/09)
 
 **Shack Power monitors and automates shack-specific things; VictronConnect (phone, Bluetooth)
