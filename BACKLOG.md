@@ -40,9 +40,11 @@ architecture; the pre-pivot items are at the bottom for the record.
   covers most configuration and general monitoring; the app's job is the shack-specific view.
   Keep the current layout and add one button (main window or Setup → Connection, shown only when
   a Cerbo host is configured) that opens `http://<cerbo-host>/` in the default browser via
-  `Process.Start(UseShellExecute)`. **No embedded WebView** — that would break the lightweight
-  rule for something the real browser does better. Direction, not a decision: nothing hard gets
-  decided until the gear is wired and we see how it feels.
+  `Process.Start(UseShellExecute)`. Default lean: **no embedded WebView** (a heavy dependency for
+  what the real browser does better). **Asterisk (David, 2026-09-12): an embedded console window
+  is not ruled out** — if living in one window turns out to matter once the system is running,
+  weigh the WebView cost against the lightweight rule then. Direction, not a decision: nothing
+  hard gets decided until the gear is wired and we see how it feels.
 
 - **SIGTERM handling on Linux (testbed handoff 2026-09-07):** a stray instance did not exit
   within 2 s of SIGTERM and needed SIGKILL. Logout and `systemd stop` send SIGTERM; handle it
