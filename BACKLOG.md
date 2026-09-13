@@ -36,6 +36,14 @@ architecture; the pre-pivot items are at the bottom for the record.
 
 ## Smaller / standing
 
+- **"Open Cerbo console" button (David, 2026-09-12).** The GX's remote console web page already
+  covers most configuration and general monitoring; the app's job is the shack-specific view.
+  Keep the current layout and add one button (main window or Setup → Connection, shown only when
+  a Cerbo host is configured) that opens `http://<cerbo-host>/` in the default browser via
+  `Process.Start(UseShellExecute)`. **No embedded WebView** — that would break the lightweight
+  rule for something the real browser does better. Direction, not a decision: nothing hard gets
+  decided until the gear is wired and we see how it feels.
+
 - **SIGTERM handling on Linux (testbed handoff 2026-09-07):** a stray instance did not exit
   within 2 s of SIGTERM and needed SIGKILL. Logout and `systemd stop` send SIGTERM; handle it
   like a window close (flush config, release the port/socket, exit). `PosixSignalRegistration`
