@@ -40,6 +40,17 @@ minutes), vebus AC power is W×0.1 (i.e. the word is tens of watts), `/ConsumedA
   227; USB VE.Direct cables land at 239 and 231–238. **Unit 100 is always the system
   aggregate** (`com.victronenergy.system` / `.settings`) and answers battery registers as the
   *system* battery, so discovery skips it.
+- **That equivalence breaks above 247, and a CAN-bus BMS is the case that hits it.** The Modbus
+  unit-id field is one byte, so an instance of 512 cannot be addressed directly. Victron already
+  solved this with a fixed table shipped **on the GX** at
+  `/opt/victronenergy/dbus-modbustcp/unitid2di.csv` — read it there rather than trusting a forum
+  post. The two entries that matter here: **`225` → instance 512, "CAN-bus BMS"**, and
+  **`227` → instance 276**, the Cerbo's VE.Bus port. `ModbusAlternates` and `ModbusSlaveAddress`
+  stay unset; they are not needed. **Find devices must probe 225, or it will not see a CAN
+  battery at all.**
+- **Reuse one connection across registers.** Opening a socket per register gets some of them
+  refused, and a refused read is indistinguishable from missing data at a glance — it looks like
+  the device dropped fields. One connection, several reads, verified 2026-09-15.
 - **A register the device doesn't publish answers a Modbus exception, and one bad word fails
   the whole block it sits in.** That is why `CerboDecoder` reads narrow groups (P/V/I as one
   block, SOC/CE as one, TTG alone, alarms alone…): a shunt without a temperature sensor, or one
@@ -60,6 +71,7 @@ minutes), vebus AC power is W×0.1 (i.e. the word is tens of watts), `/ConsumedA
 | | /History/MinimumVoltage, MaximumVoltage | 287, 288 | uint16 | 100 | V |
 | | /History/DischargedEnergy, ChargedEnergy | 301, 302 | uint16 | 10 | kWh |
 | | /TimeToGo | 303 | uint16 | 0.01 | seconds; absent when not discharging → app shows ∞ |
+| battery on **CAN** (unit 225) | /Dc/0/Voltage, Current, Temperature, Soc | 259, 261, 262, 266 | | 100, 10, 10, 10 | same registers as the shunt, different unit id — verified live 2026-09-15 against the Epoch: 13.16 V, 0 A, 22.5 °C, 47 % |
 | vebus (MultiPlus) | /Ac/ActiveIn/L1/V, I, P | 3, 6, 12 | uint16/int16/int16 | 10/10/0.1 | mains in |
 | | /Ac/Out/L1/V, P | 15, 23 | uint16/int16 | 10/0.1 | the backed-up AC |
 | | /Dc/0/Voltage, Current | 26, 27 | uint16/int16 | 100/10 | charger DC side |
@@ -88,6 +100,24 @@ MultiPlus's own charge current has no Modbus register at all. **DVCC must be ena
 GX** (Settings → DVCC) or 2705 does nothing. `ChargeInhibit` (Core) implements engage /
 re-assert / release with the previous limit remembered, and never restores *to* 0 — a stale 0
 from a crashed session restores to "no limit".
+
+**2026-09-15: DVCC is now FORCED ON, and that changes the premise of this section.** A managed
+battery arrived on VE.Can 1 — a Pi re-serving the Epoch's JBD BMS as Pylontech-profile CAN frames
+(see `gsa700/epoch-bms`). Presenting a managed CAN battery makes Venus force DVCC on and keep it
+there: `Services/Bol = 3`, `/Control/Dvcc = 1`, `/Control/BmsParameters = 1`. So "DVCC must be
+enabled on the GX or 2705 does nothing" is no longer a prerequisite to arrange — it is done, and
+cannot be undone while that battery is present.
+
+**What is now UNKNOWN and must be tested before the inhibit is exposed:** with a BMS also asserting
+charge limits, does a write of 2705 = 0 still take effect, or does the BMS parameter win? The GX
+reports `/Control/EffectiveChargeVoltage` as 14.2 V, which is the CAN battery's own CVL, so the BMS
+is demonstrably in the loop. Bench-test 2705 against the live system before assuming the mechanism
+in this section still behaves as written.
+
+**Also: the CAN battery wins battery-monitor auto-selection** (`AutoSelectedBatteryService` =
+"Pylontech battery on CAN-bus"). When the SmartShunt moves onto the GX, set *Settings → System
+setup → Battery monitor* to it explicitly, or a Pi or link failure takes the system's battery
+reference with it.
 
 **Open before this is wired to a button:** a register write has no timeout. If the app dies
 while inhibited, the GX sits at 0 A until someone notices. The old smart-plug design had the
@@ -132,6 +162,26 @@ exercise on the bench with a person watching.
    watchdog flow.
 7. Capture a few minutes of readings to `logs/` and compare the CSV against the same interval
    on the shunt's own history. Commit the unit IDs and any register surprises to this file.
+
+## MQTT, and two traps when verifying any of this
+
+The GX's MQTT broker is an alternative to Modbus for reading: topics are keyed on device instance,
+so the unit-id limit above does not apply — `N/<portalId>/battery/512/<path>`, payloads
+`{"value": …}`. Publishing an empty message to `R/<portalId>/keepalive` makes Venus republish
+everything. Enable it in Settings alongside Modbus TCP; until then Venus keeps iptables REJECT rules
+on 1883/8883/9001, which is why a probe gets "connection refused" rather than a timeout.
+
+- **MQTT values are RETAINED. They are not a liveness check.** The broker keeps answering with the
+  last known value long after the service behind it has gone, so a battery that has dropped off the
+  GX still reports a plausible voltage and name over MQTT. Modbus reads live at request time and is
+  the honest check. This cost an hour on 2026-09-15: two weak instruments agreed and the conclusion
+  drawn from them was wrong.
+- **Floats arrive widened.** 13.16 V comes back as `13.15999984741211` — 32-bit floats promoted to
+  64-bit. Round; never compare exactly.
+- **After anything restarts on the far end, re-registration takes a variable time** — measured at
+  16 s once and still failing at 60 s another time. Do not assume a fixed settle. Poll until Modbus
+  answers, then read again ~20 s later: an *instant* answer is the tell that you are seeing the
+  pre-restart registration rather than the new one.
 
 ## The Linux testbed
 
