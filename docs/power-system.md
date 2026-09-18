@@ -78,6 +78,15 @@ N-type -0.25 %/C; JJN publishes no coefficient) - inside 100 V but not a margin 
 Bifacial gain needs a tilted mount with rear clearance; flush on a roof it is a heavy monofacial
 panel. Inspect both glass faces on delivery and check ~38 V open-circuit at the MC4 leads.
 
+**Mount plan (David, 2026-09-18): angled roof brackets, tilted for sun angle**, so the rear face
+sees the roof - and in winter, snow (albedo ~0.8 vs ~0.1-0.2 for shingles), which is when the
+front face is weakest. What decides the gain: clearance under the low edge (more air = more rear
+light), a steep winter-biased tilt (~60 deg at 45 N; also sheds snow), brackets lagged into rafters
+with flashed penetrations (wind uplift is the real load). Cold bright snowy days may exceed 425 W;
+the 100/30 clips at ~440 W and reflection adds current, not volts. Bond frame and mount to the
+station single-point ground; keep the PV pair together and ferrite it at the MPPT - next to a
+full-power station those leads are an antenna.
+
 
 Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
 becomes a second, weather-dependent charge source; the same DVCC limit inhibits it. The original rule — **never two ~50 V-Voc 450 W panels in series** (cold-morning Voc ~58 V each
