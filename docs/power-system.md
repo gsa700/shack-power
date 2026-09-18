@@ -97,6 +97,13 @@ due Mon 2026-09-21; install the following week.** Placement advice given (David'
 has a 2 ft eave overhang - keep the brackets off it (cantilevered framing, worst wind zone) and put
 the front feet over the outside wall line, where the joists bear; landscape orientation cuts the
 sail height from ~59 in to ~39 in at 60 deg.
+**Tilt decided 2026-09-18: 50 deg from level, facing true south, fixed year-round.** At 45 N the
+winter optimum is ~60 deg and the annual optimum ~38 deg; winter is the short season and summer
+output is clipped anyway, so bias steep. 50 deg keeps ~97 % of December noon output vs 60 deg and
+cuts the sail area; still 1,000+ Wh on a June day against ~800 Wh of load. The house is squared to
+the compass (faces due west), so the panel's low edge goes parallel to the roof's south edge.
+Measure tilt from level, not from the roof - flat roofs carry a degree or two of drainage pitch.
+
 **No PV disconnect, by David's decision (2026-09-18).** Tolerable at one panel (~38 V Voc: a DC
 arc will not sustain below ~50 V) - revisit if panels ever go in series. An indoor DC-rated 20-25 A
 breaker beside the MPPT remains the cheap option; nothing outdoor-rated is needed. Shutdown routine
