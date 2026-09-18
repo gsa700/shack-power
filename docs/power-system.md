@@ -63,12 +63,26 @@ mains AC ──> MultiPlus 12/1200/50-16 ──AC out──> rack power conditio
 - **Grounding:** the MultiPlus's chassis/PE lug bonds to the station's single-point ground bus
   (which is tied to the house service ground via the entry panel and rod), decided 2026-09-08.
 
-## Phase 2 (when a 450 W panel is bought)
+## Phase 2 (solar)
+
+**Panel chosen 2026-09-18: one JJN 425 W bifacial N-type (UL 61730), ~$279 shipped.** Voc 38.59 V,
+Vmp 32.15 V, Isc 13.81 A, Imp 13.22 A, 67.8 x 44.7 in, 53.6 lb, MC4. One panel fills the MPPT
+100/30 almost exactly (the controller clips at ~440 W on a 12 V bank; PV input limit 100 V / 35 A
+Isc). Expected harvest in Saint Paul: ~500-600 Wh on a December day, 1,600+ Wh in summer, against
+~800 Wh/day of station load - solar carries most of the year, the MultiPlus covers the dark weeks.
+**One now, by decision: watch a winter of real harvest before buying a second.** A second panel is
+mostly clipped and only earns in weak light; it never pays back against mains, so the only reasons
+are winter-outage independence or wanting a matched pair while the model is still sold. If added:
+**parallel** (27.6 A Isc, under the 35 A limit). Series is ~88 V at -30 C by estimate (typical
+N-type -0.25 %/C; JJN publishes no coefficient) - inside 100 V but not a margin to lean on.
+Bifacial gain needs a tilted mount with rear clearance; flush on a roof it is a heavy monofacial
+panel. Inspect both glass faces on delivery and check ~38 V open-circuit at the MC4 leads.
+
 
 Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
-becomes a second, weather-dependent charge source; the same DVCC limit inhibits it. **Never two
-450 W panels in series** — cold-morning Voc (~58 V each) puts ~115 V into a 100 V controller.
-One panel, or two in parallel. The MPPT needs its own protection point (the 2151 is dual-circuit).
+becomes a second, weather-dependent charge source; the same DVCC limit inhibits it. The original rule — **never two ~50 V-Voc 450 W panels in series** (cold-morning Voc ~58 V each
+puts ~115 V into a 100 V controller) — still stands for that class of panel; see above for
+this one. One panel, or two in parallel. The MPPT needs its own protection point (the 2151 is dual-circuit).
 MPPT firmware ≥ 1.39. Enable VE.Smart networking between shunt and MPPT.
 
 ## Load numbers (measured)
