@@ -86,6 +86,13 @@ with flashed penetrations (wind uplift is the real load). Cold bright snowy days
 the 100/30 clips at ~440 W and reflection adds current, not volts. Bond frame and mount to the
 station single-point ground; keep the PV pair together and ferrite it at the MPPT - next to a
 full-power station those leads are an antenna.
+**The roof is FLAT** (best case: wide rear view, and it holds its snow all winter). So: low edge
+above the normal snow depth (drifted snow shades the bottom cells and blocks rear light),
+membrane-rated sealant at every bracket foot and screws into joists, ground to the rods directly
+below the eave (6 AWG, short and straight; they tie to the service ground). Install notes: panel
+is live in daylight - MC4s unplugged until the MPPT end is terminated, battery side first; DC
+disconnect in the PV run near the MPPT; 10 AWG PV wire to ~50 ft one way, 8 AWG beyond; the MPPT's
+battery lead needs its own ~40 A fuse (the 2151 block is full). Install planned ~2026-09-25.
 
 
 Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
