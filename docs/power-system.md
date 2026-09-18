@@ -92,7 +92,11 @@ membrane-rated sealant at every bracket foot and screws into joists, ground to t
 below the eave (6 AWG, short and straight; they tie to the service ground). Install notes: panel
 is live in daylight - MC4s unplugged until the MPPT end is terminated, battery side first; DC
 disconnect in the PV run near the MPPT; 10 AWG PV wire to ~50 ft one way, 8 AWG beyond; the MPPT's
-battery lead needs its own ~40 A fuse (the 2151 block is full). Install planned ~2026-09-25.
+battery lead needs its own ~40 A fuse (the 2151 block is full). **Panel ordered 2026-09-18,
+due Mon 2026-09-21; install the following week.** Placement advice given (David's call): the roof
+has a 2 ft eave overhang - keep the brackets off it (cantilevered framing, worst wind zone) and put
+the front feet over the outside wall line, where the joists bear; landscape orientation cuts the
+sail height from ~59 in to ~39 in at 60 deg.
 
 
 Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
