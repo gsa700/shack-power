@@ -97,6 +97,14 @@ due Mon 2026-09-21; install the following week.** Placement advice given (David'
 has a 2 ft eave overhang - keep the brackets off it (cantilevered framing, worst wind zone) and put
 the front feet over the outside wall line, where the joists bear; landscape orientation cuts the
 sail height from ~59 in to ~39 in at 60 deg.
+**No PV disconnect, by David's decision (2026-09-18).** Tolerable at one panel (~38 V Voc: a DC
+arc will not sustain below ~50 V) - revisit if panels ever go in series. An indoor DC-rated 20-25 A
+breaker beside the MPPT remains the cheap option; nothing outdoor-rated is needed. Shutdown routine
+without one: (1) charger off in the MPPT settings (VictronConnect or the Cerbo) so PV current is
+~0, (2) unplug the MC4 pair, (3) only then the battery side - battery connects first and
+disconnects last; pulling the battery fuse with live PV attached is the sequence that can damage
+the controller. Keep one MC4 pair reachable without going on the roof; a tarp over the panel is
+the emergency disconnect.
 
 
 Add `panel → SmartSolar MPPT 100/30 → battery`, the MPPT on another Cerbo VE.Direct port. Solar
